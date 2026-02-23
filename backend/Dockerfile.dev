@@ -1,0 +1,15 @@
+FROM node:20-alpine
+WORKDIR /app
+
+# deps primero (para cache)
+COPY package*.json ./
+RUN npm ci
+
+# prisma (para generate en build)
+COPY prisma ./prisma
+RUN npx prisma generate
+
+EXPOSE 3000
+
+# En dev el código llega por volumen
+CMD sh -c "npm run start:dev"

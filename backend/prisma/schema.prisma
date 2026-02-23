@@ -1,0 +1,471 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "windows"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Persona {
+  idPersona BigInt   @id @default(autoincrement())
+  nombres   String
+  apellidos String
+  correo    String   @unique
+  celular   String
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  usuario   Usuario?
+}
+
+model Usuario {
+  idUsuario                BigInt                 @id @default(autoincrement())
+  personaId                BigInt                 @unique
+  passwordHash             String
+  ultimoLogin              DateTime?
+  activo                   Boolean                @default(true)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  cotizacionesCreadas      Cotizacion[]           @relation("CotizacionCreatedBy")
+  cotizacionesActualizadas Cotizacion[]           @relation("CotizacionUpdatedBy")
+  facturasCanceladas       Factura[]              @relation("FacturaCanceledBy")
+  facturasConfirmadas      Factura[]              @relation("FacturaConfirmedBy")
+  facturasCreadas          Factura[]              @relation("FacturaCreatedBy")
+  movimientosInventario    InventarioMovimiento[] @relation("InventoryMoveCreatedBy")
+  ollasCerradas            Olla[]                 @relation("OllaClosedBy")
+  ollasCreadas             Olla[]                 @relation("OllaCreatedBy")
+  ollasActualizadas        Olla[]                 @relation("OllaUpdatedBy")
+  productosCreados         Producto[]             @relation("ProductoCreatedBy")
+  productosActualizados    Producto[]             @relation("ProductoUpdatedBy")
+  proveedoresCreados       Proveedor[]            @relation("ProveedorCreatedBy")
+  proveedoresActualizados  Proveedor[]            @relation("ProveedorUpdatedBy")
+  recetasCreadas           Receta[]               @relation("RecetaCreatedBy")
+  recetasActualizadas      Receta[]               @relation("RecetaUpdatedBy")
+  refreshTokens            RefreshToken[]
+  userTokens               UserToken[]
+  persona                  Persona                @relation(fields: [personaId], references: [idPersona])
+  permisos                 UsuarioPermiso[]
+  roles                    UsuarioRol[]
+}
+
+model Rol {
+  idRol       BigInt       @id @default(autoincrement())
+  nombre      String       @unique
+  descripcion String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  permisos    RolPermiso[]
+  usuarios    UsuarioRol[]
+}
+
+model UsuarioRol {
+  usuarioId BigInt
+  rolId     BigInt
+  rol       Rol     @relation(fields: [rolId], references: [idRol], onDelete: Cascade)
+  usuario   Usuario @relation(fields: [usuarioId], references: [idUsuario], onDelete: Cascade)
+
+  @@id([usuarioId, rolId])
+  @@index([rolId])
+}
+
+model Permiso {
+  idPermiso   BigInt           @id @default(autoincrement())
+  key         String           @unique
+  descripcion String?
+  activo      Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  roles       RolPermiso[]
+  usuarios    UsuarioPermiso[]
+}
+
+model RolPermiso {
+  rolId     BigInt
+  permisoId BigInt
+  permiso   Permiso @relation(fields: [permisoId], references: [idPermiso], onDelete: Cascade)
+  rol       Rol     @relation(fields: [rolId], references: [idRol], onDelete: Cascade)
+
+  @@id([rolId, permisoId])
+  @@index([permisoId])
+}
+
+model UsuarioPermiso {
+  usuarioId BigInt
+  permisoId BigInt
+  enabled   Boolean @default(true)
+  permiso   Permiso @relation(fields: [permisoId], references: [idPermiso], onDelete: Cascade)
+  usuario   Usuario @relation(fields: [usuarioId], references: [idUsuario], onDelete: Cascade)
+
+  @@id([usuarioId, permisoId])
+  @@index([permisoId])
+}
+
+model RefreshToken {
+  idRefreshToken BigInt    @id @default(autoincrement())
+  usuarioId      BigInt
+  tokenHash      String
+  revoked        Boolean   @default(false)
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+  revokedAt      DateTime?
+  usuario        Usuario   @relation(fields: [usuarioId], references: [idUsuario], onDelete: Cascade)
+
+  @@index([usuarioId])
+  @@index([expiresAt])
+  @@index([revoked])
+}
+
+model UserToken {
+  idUserToken BigInt        @id @default(autoincrement())
+  usuarioId   BigInt
+  type        UserTokenType
+  tokenHash   String
+  usedAt      DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime      @default(now())
+  usuario     Usuario       @relation(fields: [usuarioId], references: [idUsuario], onDelete: Cascade)
+
+  @@index([usuarioId, type])
+  @@index([expiresAt])
+}
+
+model UnidadMedida {
+  idUnidadMedida       BigInt                 @id @default(autoincrement())
+  key                  String                 @unique
+  nombre               String
+  activo               Boolean                @default(true)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  cotizaciones         Cotizacion[]
+  FacturaItem          FacturaItem[]
+  InventarioMovimiento InventarioMovimiento[]
+  InventarioStock      InventarioStock[]
+  RecetaItem           RecetaItem[]
+  conversionesFrom     UnidadConversion[]     @relation("UnidadConversionFrom")
+  conversionesTo       UnidadConversion[]     @relation("UnidadConversionTo")
+
+  @@index([activo])
+  @@index([key])
+}
+
+model UnidadConversion {
+  idUnidadConversion BigInt       @id @default(autoincrement())
+  fromUnidadId       BigInt
+  toUnidadId         BigInt
+  factor             Decimal      @db.Decimal(18, 10)
+  activo             Boolean      @default(true)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  fromUnidad         UnidadMedida @relation("UnidadConversionFrom", fields: [fromUnidadId], references: [idUnidadMedida])
+  toUnidad           UnidadMedida @relation("UnidadConversionTo", fields: [toUnidadId], references: [idUnidadMedida])
+
+  @@unique([fromUnidadId, toUnidadId], map: "uq_unidad_conversion_from_to")
+  @@index([fromUnidadId], map: "idx_unidad_conversion_from")
+  @@index([toUnidadId], map: "idx_unidad_conversion_to")
+  @@index([activo], map: "idx_unidad_conversion_activo")
+}
+
+model Cotizacion {
+  idCotizacion   BigInt       @id @default(autoincrement())
+  proveedorId    BigInt
+  productoId     BigInt
+  unidadId       BigInt
+  
+  // Normalized unit price (price per 1 KG, 1 L, or 1 UND)
+  precioUnidad       Decimal?     @db.Decimal(14, 4)
+  
+  // Legacy fields - kept for backward compatibility
+  precioUnitario Decimal      @db.Decimal(14, 2)
+  cantidad       Decimal      @db.Decimal(14, 3)
+  
+  // Commercial presentation from PDF (e.g., "1 Arroba", "Bulto x 50 Kg")
+  presentacionCompra String?
+  
+  // Price of the presentation (e.g., $25,000 for 1 Arroba)
+  precioPresentacion Decimal?     @db.Decimal(14, 2)
+  
+  // Metadata for traceability (JSON)
+  metadata           Json?
+  
+  fecha          DateTime
+  observacion    String?
+  activo         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  createdById    BigInt
+  updatedById    BigInt?
+  createdBy      Usuario      @relation("CotizacionCreatedBy", fields: [createdById], references: [idUsuario])
+  producto       Producto     @relation(fields: [productoId], references: [idProducto])
+  proveedor      Proveedor    @relation(fields: [proveedorId], references: [idProveedor])
+  unidad         UnidadMedida @relation(fields: [unidadId], references: [idUnidadMedida])
+  updatedBy      Usuario?     @relation("CotizacionUpdatedBy", fields: [updatedById], references: [idUsuario])
+
+  @@index([proveedorId])
+  @@index([productoId])
+  @@index([fecha])
+  @@index([activo])
+}
+
+model Proveedor {
+  idProveedor  BigInt       @id @default(autoincrement())
+  nit          String       @unique
+  nombre       String
+  telefono     String?
+  correo       String?
+  direccion    String?
+  activo       Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  createdById  BigInt
+  updatedById  BigInt?
+  cotizaciones Cotizacion[]
+  Factura      Factura[]
+  createdBy    Usuario      @relation("ProveedorCreatedBy", fields: [createdById], references: [idUsuario])
+  updatedBy    Usuario?     @relation("ProveedorUpdatedBy", fields: [updatedById], references: [idUsuario])
+  RecetaItem   RecetaItem[]
+
+  @@index([activo])
+  @@index([nombre])
+}
+
+model Categoria {
+  idCategoria BigInt     @id @default(autoincrement())
+  nombre      String     @unique
+  activo      Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  productos   Producto[]
+
+  @@index([activo])
+  @@index([nombre])
+}
+
+model Producto {
+  idProducto           BigInt                 @id @default(autoincrement())
+  nombre               String                 @unique
+  descripcion          String?
+  activo               Boolean                @default(true)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  createdById          BigInt
+  updatedById          BigInt?
+  categoriaId          BigInt?
+  cotizaciones         Cotizacion[]
+  FacturaItem          FacturaItem[]
+  InventarioMovimiento InventarioMovimiento[]
+  InventarioStock      InventarioStock[]
+  categoria            Categoria?             @relation(fields: [categoriaId], references: [idCategoria])
+  createdBy            Usuario                @relation("ProductoCreatedBy", fields: [createdById], references: [idUsuario])
+  updatedBy            Usuario?               @relation("ProductoUpdatedBy", fields: [updatedById], references: [idUsuario])
+  RecetaItem           RecetaItem[]
+
+  @@index([categoriaId])
+}
+
+model CategoriaReceta {
+  idCategoriaReceta BigInt   @id @default(autoincrement())
+  nombre            String   @unique
+  activo            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  color             String   @default("#6B7280")
+  recetas           Receta[]
+
+  @@index([activo])
+  @@index([nombre])
+}
+
+model Receta {
+  idReceta      BigInt           @id @default(autoincrement())
+  nombre        String           @unique
+  porcionesBase Decimal?         @db.Decimal(14, 2)
+  activo        Boolean          @default(true)
+  categoriaId   BigInt?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  createdById   BigInt
+  updatedById   BigInt?
+  ollas         Olla[]
+  categoria     CategoriaReceta? @relation(fields: [categoriaId], references: [idCategoriaReceta])
+  createdBy     Usuario          @relation("RecetaCreatedBy", fields: [createdById], references: [idUsuario])
+  updatedBy     Usuario?         @relation("RecetaUpdatedBy", fields: [updatedById], references: [idUsuario])
+  items         RecetaItem[]
+
+  @@index([activo])
+  @@index([categoriaId])
+}
+
+model RecetaItem {
+  idRecetaItem BigInt         @id @default(autoincrement())
+  recetaId     BigInt
+  productoId   BigInt
+  unidadId     BigInt
+  proveedorId  BigInt?
+  modo         ModoItemReceta @default(AUTO)
+  cantidad     Decimal        @db.Decimal(14, 3)
+  producto     Producto       @relation(fields: [productoId], references: [idProducto])
+  proveedor    Proveedor?     @relation(fields: [proveedorId], references: [idProveedor])
+  receta       Receta         @relation(fields: [recetaId], references: [idReceta], onDelete: Cascade)
+  unidad       UnidadMedida   @relation(fields: [unidadId], references: [idUnidadMedida])
+
+  @@index([recetaId])
+  @@index([productoId])
+}
+
+model Bodega {
+  idBodega    BigInt                 @id @default(autoincrement())
+  nombre      String                 @unique
+  descripcion String?
+  activo      Boolean                @default(true)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  facturas    Factura[]
+  movimientos InventarioMovimiento[]
+  stocks      InventarioStock[]
+
+  @@index([activo])
+}
+
+model Factura {
+  idFactura     BigInt                 @id @default(autoincrement())
+  proveedorId   BigInt
+  bodegaId      BigInt
+  numero        String
+  fecha         DateTime
+  status        InvoiceStatus          @default(DRAFT)
+  observacion   String?
+  activo        Boolean                @default(true)
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
+  createdById   BigInt
+  confirmedById BigInt?
+  confirmedAt   DateTime?
+  canceledById  BigInt?
+  canceledAt    DateTime?
+  cancelReason  String?
+  bodega        Bodega                 @relation(fields: [bodegaId], references: [idBodega])
+  canceledBy    Usuario?               @relation("FacturaCanceledBy", fields: [canceledById], references: [idUsuario])
+  confirmedBy   Usuario?               @relation("FacturaConfirmedBy", fields: [confirmedById], references: [idUsuario])
+  createdBy     Usuario                @relation("FacturaCreatedBy", fields: [createdById], references: [idUsuario])
+  proveedor     Proveedor              @relation(fields: [proveedorId], references: [idProveedor])
+  items         FacturaItem[]
+  movimientos   InventarioMovimiento[]
+
+  @@unique([proveedorId, numero])
+  @@index([proveedorId])
+  @@index([bodegaId])
+  @@index([fecha])
+  @@index([status])
+}
+
+model FacturaItem {
+  idFacturaItem  BigInt       @id @default(autoincrement())
+  facturaId      BigInt
+  productoId     BigInt
+  unidadId       BigInt
+  cantidad       Decimal      @db.Decimal(14, 3)
+  precioUnitario Decimal      @db.Decimal(14, 2)
+  observacion    String?
+  factura        Factura      @relation(fields: [facturaId], references: [idFactura], onDelete: Cascade)
+  producto       Producto     @relation(fields: [productoId], references: [idProducto])
+  unidad         UnidadMedida @relation(fields: [unidadId], references: [idUnidadMedida])
+
+  @@index([facturaId])
+  @@index([productoId])
+}
+
+model InventarioStock {
+  idInventarioStock BigInt       @id @default(autoincrement())
+  bodegaId          BigInt
+  productoId        BigInt
+  unidadId          BigInt
+  cantidad          Decimal      @default(0) @db.Decimal(14, 3)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  bodega            Bodega       @relation(fields: [bodegaId], references: [idBodega])
+  producto          Producto     @relation(fields: [productoId], references: [idProducto])
+  unidad            UnidadMedida @relation(fields: [unidadId], references: [idUnidadMedida])
+
+  @@unique([bodegaId, productoId, unidadId])
+  @@index([productoId])
+  @@index([bodegaId])
+}
+
+model InventarioMovimiento {
+  idMovimiento BigInt            @id @default(autoincrement())
+  type         InventoryMoveType
+  fecha        DateTime          @default(now())
+  bodegaId     BigInt
+  productoId   BigInt
+  unidadId     BigInt
+  cantidad     Decimal           @db.Decimal(14, 3)
+  referencia   String?
+  facturaId    BigInt?
+  createdById  BigInt
+  bodega       Bodega            @relation(fields: [bodegaId], references: [idBodega])
+  createdBy    Usuario           @relation("InventoryMoveCreatedBy", fields: [createdById], references: [idUsuario])
+  factura      Factura?          @relation(fields: [facturaId], references: [idFactura])
+  producto     Producto          @relation(fields: [productoId], references: [idProducto])
+  unidad       UnidadMedida      @relation(fields: [unidadId], references: [idUnidadMedida])
+
+  @@index([bodegaId])
+  @@index([productoId])
+  @@index([facturaId])
+  @@index([fecha])
+}
+
+model Olla {
+  idOlla          BigInt    @id @default(autoincrement())
+  fecha           DateTime
+  recetaId        BigInt
+  porciones       Decimal   @db.Decimal(14, 3)
+  status          PotStatus @default(OPEN)
+  totalReceta     Decimal?  @db.Decimal(14, 2)
+  costoPorPorcion Decimal?  @db.Decimal(14, 6)
+  snapshot        Json?
+  notas           String?
+  createdById     BigInt
+  updatedById     BigInt?
+  closedById      BigInt?
+  closedAt        DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  closedBy        Usuario?  @relation("OllaClosedBy", fields: [closedById], references: [idUsuario])
+  createdBy       Usuario   @relation("OllaCreatedBy", fields: [createdById], references: [idUsuario])
+  receta          Receta    @relation(fields: [recetaId], references: [idReceta])
+  updatedBy       Usuario?  @relation("OllaUpdatedBy", fields: [updatedById], references: [idUsuario])
+
+  @@index([fecha])
+  @@index([recetaId])
+  @@index([status])
+}
+
+enum UserTokenType {
+  PASSWORD_RESET
+  EMAIL_VERIFY
+}
+
+enum ModoItemReceta {
+  AUTO
+  BY_PROVIDER
+  HYPOTHETICAL
+}
+
+enum InvoiceStatus {
+  DRAFT
+  CONFIRMED
+  CANCELED
+}
+
+enum InventoryMoveType {
+  IN
+  OUT
+  ADJUST
+}
+
+enum PotStatus {
+  OPEN
+  CLOSED
+}
