@@ -35,7 +35,7 @@ export class ProductsService {
     );
   }
 
-  create(data: { nombre: string }): Observable<Product> {
+  create(data: { nombre: string; categoriaId?: string }): Observable<Product> {
     return this.http.post<any>(this.url, data).pipe(
       map((p) => this.normalizeProducts([p])[0])
     );

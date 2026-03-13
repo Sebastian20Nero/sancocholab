@@ -144,7 +144,7 @@
 
     <!-- Create Modal -->
     <app-quotation-create-modal *ngIf="showCreateModal()" [units]="units()" [suppliers]="suppliers()"
-        [products]="products()" (saved)="closeCreateModal(true)" (cancelled)="closeCreateModal(false)">
+        [products]="products()" [categories]="categories()" (saved)="closeCreateModal(true)" (cancelled)="closeCreateModal(false)">
     </app-quotation-create-modal>
 
     <!-- Edit Modal -->

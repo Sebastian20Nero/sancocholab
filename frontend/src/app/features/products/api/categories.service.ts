@@ -25,4 +25,8 @@ export class CategoriesService {
       catchError(() => of([]))
     );
   }
+
+  create(data: { nombre: string }): Observable<any> {
+    return this.http.post<any>(this.url, data);
+  }
 }

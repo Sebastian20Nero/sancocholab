@@ -4,9 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { QuotationsService } from '../api/quotations.service';
 import { SuppliersService } from '../api/suppliers.service';
 import { ProductsService } from '../../products/api/products.service';
+import { CategoriesService } from '../../products/api/categories.service';
 import { MeasuresService } from '../api/measures.service';
 import { ModalStateService } from '../../../shared/services/modal-state.service';
 import { Supplier } from '../models/supplier.model';
+import { Category } from '../../products/models/category.model';
 
 interface UnitOption {
     id: string;
@@ -86,6 +88,36 @@ interface UnitOption {
                             <div *ngIf="creatingProduct()" class="animate-fade-in-up">
                                 <input type="text" [(ngModel)]="newProduct.nombre" placeholder="Ej: Acetaminofén 500mg" class="w-full px-3 py-2 border border-blue-300 dark:border-blue-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-100">
                             </div>
+                        </div>
+                    </div>
+
+                    <!-- Categoría del Producto (solo aparece cuando se crea un producto nuevo) -->
+                    <div *ngIf="creatingProduct()" class="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                🏷️ Categoría del Producto
+                            </label>
+                            <button *ngIf="!creatingCategory()" type="button" (click)="toggleCategoryMode()" class="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+                                <span>➕</span> Nueva Categoría
+                            </button>
+                            <button *ngIf="creatingCategory()" type="button" (click)="toggleCategoryMode()" class="text-xs text-gray-500 hover:underline flex items-center gap-1">
+                                <span>🔙</span> Volver a la lista
+                            </button>
+                        </div>
+
+                        <div *ngIf="!creatingCategory()">
+                            <select
+                                [(ngModel)]="formData.categoriaId"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-100">
+                                <option value="" disabled selected>Seleccione una categoría... *</option>
+                                <option *ngFor="let c of categories" [value]="c.id">
+                                    {{ c.name }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div *ngIf="creatingCategory()" class="animate-fade-in-up">
+                            <input type="text" [(ngModel)]="newCategory.nombre" placeholder="Ej: Lácteos, Verduras, Carnes..." class="w-full px-3 py-2 border border-amber-300 dark:border-amber-700 rounded-lg focus:ring-2 focus:ring-amber-500 dark:bg-gray-800 dark:text-gray-100">
                         </div>
                     </div>
 
@@ -260,6 +292,7 @@ export class QuotationCreateModalComponent implements OnInit, OnDestroy {
     @Input() units: UnitOption[] = [];
     @Input() suppliers: Supplier[] = [];
     @Input() products: any[] = [];
+    @Input() categories: Category[] = [];
     @Output() saved = new EventEmitter<boolean>();
     @Output() cancelled = new EventEmitter<void>();
 
@@ -267,12 +300,14 @@ export class QuotationCreateModalComponent implements OnInit, OnDestroy {
     error = signal<string | null>(null);
     creatingProvider = signal(false);
     creatingProduct = signal(false);
+    creatingCategory = signal(false);
     creatingUnit = signal(false);
 
     formData = {
         fecha: '',
         productoId: '',
         proveedorId: '',
+        categoriaId: '',
         presentacionCompra: '',
         precioPresentacion: '',
         cantidad: '',
@@ -290,6 +325,10 @@ export class QuotationCreateModalComponent implements OnInit, OnDestroy {
         nombre: ''
     };
 
+    newCategory = {
+        nombre: ''
+    };
+
     newUnit = {
         key: '',
         nombre: ''
@@ -299,6 +338,7 @@ export class QuotationCreateModalComponent implements OnInit, OnDestroy {
         private quotationsApi: QuotationsService,
         private suppliersApi: SuppliersService,
         private productsApi: ProductsService,
+        private categoriesApi: CategoriesService,
         private measuresApi: MeasuresService,
         private modalStateService: ModalStateService
     ) { }
@@ -312,7 +352,7 @@ export class QuotationCreateModalComponent implements OnInit, OnDestroy {
         this.modalStateService.closeModal();
     }
 
-    toggleSubjectMode(type: 'provider' | 'product' | 'unit') {
+    toggleSubjectMode(type: 'provider' | 'product' | 'category' | 'unit') {
         if (type === 'provider') {
             this.creatingProvider.set(!this.creatingProvider());
             if (this.creatingProvider()) {
@@ -327,6 +367,17 @@ export class QuotationCreateModalComponent implements OnInit, OnDestroy {
                 this.formData.productoId = '';
             } else {
                 this.newProduct.nombre = '';
+                // Al volver a seleccionar producto existente, resetear categoría
+                this.creatingCategory.set(false);
+                this.newCategory.nombre = '';
+                this.formData.categoriaId = '';
+            }
+        } else if (type === 'category') {
+            this.creatingCategory.set(!this.creatingCategory());
+            if (this.creatingCategory()) {
+                this.formData.categoriaId = '';
+            } else {
+                this.newCategory.nombre = '';
             }
         } else if (type === 'unit') {
             this.creatingUnit.set(!this.creatingUnit());
@@ -345,6 +396,10 @@ export class QuotationCreateModalComponent implements OnInit, OnDestroy {
 
     toggleProductMode() {
         this.toggleSubjectMode('product');
+    }
+
+    toggleCategoryMode() {
+        this.toggleSubjectMode('category');
     }
 
     toggleUnitMode() {
@@ -370,6 +425,13 @@ export class QuotationCreateModalComponent implements OnInit, OnDestroy {
             ? (this.newProduct.nombre.trim().length >= 2)
             : !!this.formData.productoId;
 
+        // Category is required only when creating a new product
+        const hasCategoria = this.creatingProduct()
+            ? (this.creatingCategory()
+                ? this.newCategory.nombre.trim().length >= 2
+                : !!this.formData.categoriaId)
+            : true; // existing product already has its category
+
         const hasUnit = this.creatingUnit()
             ? (this.newUnit.key.trim().length >= 1 && this.newUnit.nombre.trim().length >= 2)
             : !!this.formData.unidadId;
@@ -377,6 +439,7 @@ export class QuotationCreateModalComponent implements OnInit, OnDestroy {
         return (
             !!this.formData.fecha &&
             hasProducto &&
+            hasCategoria &&
             hasProveedor &&
             hasUnit &&
             !isNaN(cantidad) && cantidad > 0 &&
@@ -427,10 +490,24 @@ export class QuotationCreateModalComponent implements OnInit, OnDestroy {
                 finalProveedorId = createdProv.id;
             }
 
-            // 1.5 Create product if needed
+            // 1.5 Create category if needed (only when creating a new product)
+            let finalCategoriaId = this.formData.categoriaId || undefined;
+            if (this.creatingProduct() && this.creatingCategory() && this.newCategory.nombre.trim()) {
+                const createdCat = await new Promise<any>((resolve, reject) => {
+                    this.categoriesApi.create({ nombre: this.newCategory.nombre.trim() }).subscribe({
+                        next: resolve,
+                        error: reject
+                    });
+                });
+                finalCategoriaId = String(createdCat.idCategoria ?? createdCat.id);
+            }
+
+            // 1.6 Create product if needed (with category)
             if (this.creatingProduct()) {
+                const productData: any = { nombre: this.newProduct.nombre };
+                if (finalCategoriaId) productData.categoriaId = finalCategoriaId;
                 const createdProd = await new Promise<any>((resolve, reject) => {
-                    this.productsApi.create(this.newProduct).subscribe({
+                    this.productsApi.create(productData).subscribe({
                         next: resolve,
                         error: reject
                     });

@@ -424,31 +424,63 @@ export class BulkUploadService {
                     throw new Error("Missing required IDs for quotation creation");
                 }
 
-                // STEP 9: Create Quotation with new fields (vars are set in STEP 3 or we continued)
-                await this.prisma.cotizacion.create({
-                    data: {
+                // STEP 9: UPSERT — buscar cotización existente con mismo proveedor+producto
+                const existingQuote = await this.prisma.cotizacion.findFirst({
+                    where: {
                         proveedorId: proveedorId!,
                         productoId: productoId!,
-                        unidadId: unidadId!,
-                        // NEW FIELDS
-                        precioUnidad: precioUnidadNormalizado!,
-                        presentacionCompra: row.presentacionOriginal?.trim() || null,
-                        precioPresentacion: precioPresentacionValue,
-                        metadata: row.presentacionOriginal ? {
-                            presentacionOriginal: row.presentacionOriginal,
-                            formato: isNewFormat ? 'nuevo' : 'legacy',
-                        } : undefined,
-                        // LEGACY FIELDS (for backward compatibility)
-                        precioUnitario: precioUnitarioLegacy!,
-                        cantidad: cantidadLegacy!,
-                        fecha,
-                        observacion: row.observacion?.trim() || null,
                         activo: true,
-                        createdById: userId,
                     },
+                    select: { idCotizacion: true },
                 });
 
-                result.created.quotations++;
+                if (existingQuote) {
+                    // Actualizar cotización existente
+                    await this.prisma.cotizacion.update({
+                        where: { idCotizacion: existingQuote.idCotizacion },
+                        data: {
+                            unidadId: unidadId!,
+                            precioUnidad: precioUnidadNormalizado!,
+                            presentacionCompra: row.presentacionOriginal?.trim() || null,
+                            precioPresentacion: precioPresentacionValue,
+                            metadata: row.presentacionOriginal ? {
+                                presentacionOriginal: row.presentacionOriginal,
+                                formato: isNewFormat ? 'nuevo' : 'legacy',
+                            } : undefined,
+                            precioUnitario: precioUnitarioLegacy!,
+                            cantidad: cantidadLegacy!,
+                            fecha,
+                            observacion: row.observacion?.trim() || null,
+                            updatedById: userId,
+                        },
+                    });
+                    // Track as updated (reuse quotations counter for simplicity)
+                    result.created.quotations++;
+                } else {
+                    // Crear nueva cotización
+                    await this.prisma.cotizacion.create({
+                        data: {
+                            proveedorId: proveedorId!,
+                            productoId: productoId!,
+                            unidadId: unidadId!,
+                            precioUnidad: precioUnidadNormalizado!,
+                            presentacionCompra: row.presentacionOriginal?.trim() || null,
+                            precioPresentacion: precioPresentacionValue,
+                            metadata: row.presentacionOriginal ? {
+                                presentacionOriginal: row.presentacionOriginal,
+                                formato: isNewFormat ? 'nuevo' : 'legacy',
+                            } : undefined,
+                            precioUnitario: precioUnitarioLegacy!,
+                            cantidad: cantidadLegacy!,
+                            fecha,
+                            observacion: row.observacion?.trim() || null,
+                            activo: true,
+                            createdById: userId,
+                        },
+                    });
+                    result.created.quotations++;
+                }
+
                 result.success++;
             } catch (error) {
                 // Unexpected error for this row

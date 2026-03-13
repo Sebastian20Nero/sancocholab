@@ -84,6 +84,31 @@ export class QuotesService {
       createdBy: { connect: { idUsuario: createdById } },
     };
 
+    // ── UPSERT: buscar cotización existente con mismo proveedor+producto ──
+    const existing = await this.prisma.cotizacion.findFirst({
+      where: {
+        proveedorId,
+        productoId,
+        activo: true,
+      },
+      select: { idCotizacion: true },
+    });
+
+    if (existing) {
+      // Actualizar la cotización existente en lugar de crear duplicado
+      return this.repo.update(existing.idCotizacion, {
+        unidad: { connect: { idUnidadMedida: normalized.unidadId } },
+        precioUnitario: precioCanon,
+        cantidad: normalized.cantidad,
+        fecha: new Date(dto.fecha),
+        observacion: dto.observacion?.trim() || null,
+        presentacionCompra: dto.presentacionCompra?.trim() || null,
+        precioPresentacion: precioPresentacionRaw,
+        precioUnidad: precioCanon,
+        updatedBy: { connect: { idUsuario: createdById } },
+      });
+    }
+
     return this.repo.create(data);
   }
 
