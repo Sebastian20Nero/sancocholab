@@ -53,7 +53,7 @@ const TEMPLATE = /* html */`
       <div class="font-semibold mb-1">¿Qué hace esta pantalla?</div>
       <ul class="list-disc pl-5 space-y-1 opacity-80">
         <li>Agregas ingredientes con una <b>cantidad base</b> y una <b>unidad</b> (KG / L / UND).</li>
-        <li>Si hay cotizaciones, puedes elegir un <b>proveedor específico</b> (modo BY_PROVIDER).</li>
+        <li>Si hay cotizaciones, puedes elegir un <b>proveedor específico</b>.</li>
         <li>Luego defines <b>porciones</b> para escalar la receta.</li>
         <li>El sistema calcula el costo usando <b>cotizaciones</b> o un <b>override de precio</b>.</li>
       </ul>
@@ -190,7 +190,7 @@ const TEMPLATE = /* html */`
                 Cantidad base: {{ it.cantidad }} {{ it.unidad?.key ?? it.unidadId }}
               </div>
               <div class="text-xs mt-0.5">
-                <span class="font-semibold">{{ it.modo ?? 'AUTO' }}</span>
+                <span class="font-semibold">{{ modoLabel(it.modo) }}</span>
                 <ng-container *ngIf="it.proveedor">
                   · <span class="text-blue-700 font-medium">{{ it.proveedor.nombre }}</span>
                 </ng-container>
@@ -482,7 +482,7 @@ export class RecipeDetailPage {
     const st = this.priceStatus(productoId);
     if (st === 'QUOTE') return 'Precio disponible (cotizacion)';
     if (st === 'OVERRIDE') return 'Precio manual (override)';
-    return 'Sin precio — ejecuta Calcular o ingresa override';
+    return 'Sin precio — dale Calcular o ingresa un precio manual';
   }
 
   priceValue(productoId: string): string | null {
@@ -552,6 +552,13 @@ export class RecipeDetailPage {
     return quotes
       .map(q => q.proveedorNombre + ' — ' + this.formatPrecio(q.precioUnidad) + '/' + unitKey)
       .join(' · ');
+  }
+
+  modoLabel(modo: string | null | undefined): string {
+    if (!modo || modo === 'AUTO') return 'Mejor precio';
+    if (modo === 'BY_PROVIDER') return 'Por proveedor';
+    if (modo === 'HYPOTHETICAL') return 'Hipotético';
+    return modo;
   }
 
   formatPrecio(value: string | number): string {
