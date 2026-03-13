@@ -59,6 +59,33 @@ interface UnitOption {
 
                 <!-- Editable fields -->
                 <div class="space-y-4">
+                    <!-- Presentación de la Cotización -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Presentación (ej. Caja, Bulto)
+                            </label>
+                            <input
+                                type="text"
+                                [(ngModel)]="formData.presentacionCompra"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-100"
+                                placeholder="Opcional">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Precio Presentación
+                            </label>
+                            <input
+                                type="number"
+                                [(ngModel)]="formData.precioPresentacion"
+                                step="0.01"
+                                min="0"
+                                class="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-gray-100"
+                                placeholder="Opcional">
+                            <p class="mt-1 text-sm text-gray-500">{{ formatCurrency(formData.precioPresentacion || '0') }}</p>
+                        </div>
+                    </div>
+
                     <!-- Cantidad -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -179,6 +206,8 @@ export class QuotationEditModalComponent implements OnDestroy {
         precioUnitario: '',
         fecha: '',
         observacion: '',
+        presentacionCompra: '',
+        precioPresentacion: '',
     };
 
     constructor(
@@ -188,13 +217,14 @@ export class QuotationEditModalComponent implements OnDestroy {
 
     ngOnInit() {
         this.modalStateService.openModal();
-        // Initialize form with current values
         this.formData = {
             cantidad: this.quotation.cantidad,
             unidadId: this.quotation.unidadId,
             precioUnitario: this.quotation.precioUnitario,
             fecha: this.formatDateForInput(this.quotation.fecha),
             observacion: '',
+            presentacionCompra: this.quotation.presentacionCompra || '',
+            precioPresentacion: this.quotation.precioPresentacion || '',
         };
     }
 
@@ -263,6 +293,18 @@ export class QuotationEditModalComponent implements OnDestroy {
 
         if (this.formData.observacion?.trim()) {
             updateData.observacion = this.formData.observacion.trim();
+        }
+
+        if (this.formData.presentacionCompra?.trim()) {
+            updateData.presentacionCompra = this.formData.presentacionCompra.trim();
+        } else {
+            updateData.presentacionCompra = null;
+        }
+
+        if (this.formData.precioPresentacion) {
+            updateData.precioPresentacion = parseFloat(String(this.formData.precioPresentacion)).toFixed(2);
+        } else {
+            updateData.precioPresentacion = null;
         }
 
         this.quotationsApi.update(this.quotation.idCotizacion, updateData).subscribe({

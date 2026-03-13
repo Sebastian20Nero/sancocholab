@@ -44,4 +44,12 @@ export class OllasApi {
     getPedido(id: string) {
         return this.http.get<OllaPedido>(`${this.base}/pots/pedidos/${id}`);
     }
+
+    deletePedido(id: string) {
+        return this.http.delete<{ message: string }>(`${this.base}/pots/pedidos/${id}`);
+    }
+
+    updatePedidoNombre(id: string, nombre: string) {
+        return this.http.patch<{ message: string }>(`${this.base}/pots/pedidos/${id}`, { nombre });
+    }
 }

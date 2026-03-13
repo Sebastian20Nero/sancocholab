@@ -4,17 +4,101 @@
             <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">Cotizaciones</h1>
             <p class="text-sm text-gray-500">Gestión y consulta de cotizaciones de productos</p>
         </div>
-        <button (click)="openUploadModal()"
-            class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="flex gap-2">
+            <button (click)="openCreateModal()"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 shadow-sm transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                </svg>
+                Nueva Cotización
+            </button>
+            <button (click)="openUploadModal()"
+                class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-2 shadow-sm transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Importar Excel
+            </button>
+        </div>
+    </div>
+
+    <!-- Metrics Toggle (Prominent) -->
+    <div *ngIf="!loading() && !error() && quotations().length > 0" class="flex justify-center my-2">
+        <button (click)="toggleMetrics()"
+            class="flex items-center gap-2 px-6 py-2 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/40 dark:text-indigo-300 dark:hover:bg-indigo-900/60 transition-all font-medium border border-indigo-200 dark:border-indigo-800 shadow-sm">
+            <svg *ngIf="showMetrics()" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
             </svg>
-            Importar Excel
+            <svg *ngIf="!showMetrics()" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+            </svg>
+            {{ showMetrics() ? 'Ocultar Resumen Dinámico' : 'Mostrar Resumen Dinámico' }}
         </button>
     </div>
 
-    <div class="rounded-xl border border-gray-200 bg-white p-4 dark:bg-gray-900 dark:border-gray-800">
+    <!-- Summary Cards (Dashboard metrics) -->
+    <div *ngIf="showMetrics() && !loading() && !error() && quotations().length > 0"
+        class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 animate-fade-in-up">
+        <!-- Card 1: Total Investment -->
+        <div
+            class="bg-gradient-to-br from-blue-500 to-blue-700 rounded-xl p-5 text-white shadow-lg relative overflow-hidden group">
+            <div
+                class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white opacity-10 rounded-full transform group-hover:scale-110 transition-transform duration-500">
+            </div>
+            <div class="relative z-10 flex items-center justify-between">
+                <div>
+                    <p class="text-blue-100 text-sm font-medium mb-1">Valor Total Cotizado</p>
+                    <h3 class="text-3xl font-bold">{{ formatCurrency(totalInvestment()) }}</h3>
+                </div>
+                <div class="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <span class="text-2xl">💰</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 2: Total Items -->
+        <div
+            class="bg-gradient-to-br from-purple-500 to-purple-700 rounded-xl p-5 text-white shadow-lg relative overflow-hidden group">
+            <div
+                class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white opacity-10 rounded-full transform group-hover:scale-110 transition-transform duration-500">
+            </div>
+            <div class="relative z-10 flex items-center justify-between">
+                <div>
+                    <p class="text-purple-100 text-sm font-medium mb-1">Total Cotizaciones</p>
+                    <h3 class="text-3xl font-bold">{{ quotations().length }}</h3>
+                </div>
+                <div class="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <span class="text-2xl">📦</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card 3: Unique Suppliers -->
+        <div
+            class="bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-xl p-5 text-white shadow-lg relative overflow-hidden group">
+            <div
+                class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white opacity-10 rounded-full transform group-hover:scale-110 transition-transform duration-500">
+            </div>
+            <div class="relative z-10 flex items-center justify-between">
+                <div>
+                    <p class="text-emerald-100 text-sm font-medium mb-1">Proveedores Únicos</p>
+                    <h3 class="text-3xl font-bold">{{ uniqueSuppliersCount() }}</h3>
+                </div>
+                <div class="p-3 bg-white/20 rounded-lg backdrop-blur-sm">
+                    <span class="text-2xl">🏢</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div
+        class="rounded-xl border border-gray-200 bg-white p-4 dark:bg-gray-900 dark:border-gray-800 shadow-sm transition-all hover:shadow-md">
         <app-quotation-filters [initial]="query()" [suppliers]="suppliers()" [products]="products()"
             [categories]="categories()" (changed)="onFiltersChange($event)">
         </app-quotation-filters>
@@ -24,12 +108,31 @@
     <div *ngIf="error()" class="text-sm text-red-600 dark:text-red-400">{{ error() }}</div>
 
     <div *ngIf="!loading() && !error()">
-        <div *ngIf="quotations().length > 0" class="text-sm text-gray-500 mb-2">
-            Total: {{ quotations().length }} cotizacion(es)
-        </div>
-
-        <div *ngIf="quotations().length === 0" class="text-sm text-gray-500 text-center py-8">
-            Selecciona filtros y haz clic en "Aplicar Filtros" para consultar cotizaciones
+        <div *ngIf="quotations().length === 0"
+            class="text-sm text-gray-500 py-4 flex flex-col items-center justify-center bg-white dark:bg-gray-900 rounded-xl border border-dashed border-gray-300 dark:border-gray-700 min-h-[300px]">
+            <!-- Beautiful Empty State Illustration (SVG) -->
+            <svg class="w-48 h-48 mb-4 text-gray-200 dark:text-gray-800" viewBox="0 0 200 200" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M40 70C40 64.4772 44.4772 60 50 60H150C155.523 60 160 64.4772 160 70V160C160 165.523 155.523 170 150 170H50C44.4772 170 40 165.523 40 160V70Z"
+                    fill="currentColor" />
+                <path d="M60 40C60 34.4772 64.4772 30 70 30H130C135.523 30 140 34.4772 140 40V60H60V40Z"
+                    fill="url(#paint0_linear)" />
+                <path d="M70 100H130M70 120H130M70 140H100" stroke="#CBD5E1" stroke-width="8" stroke-linecap="round" />
+                <circle cx="150" cy="50" r="20" fill="#3B82F6" class="animate-bounce" style="animation-duration: 3s;"
+                    fill-opacity="0.8" />
+                <circle cx="30" cy="130" r="15" fill="#10B981" class="animate-bounce" style="animation-duration: 4s;"
+                    fill-opacity="0.6" />
+                <defs>
+                    <linearGradient id="paint0_linear" x1="60" y1="30" x2="140" y2="60" gradientUnits="userSpaceOnUse">
+                        <stop stop-color="#3B82F6" />
+                        <stop offset="1" stop-color="#8B5CF6" />
+                    </linearGradient>
+                </defs>
+            </svg>
+            <h3 class="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">¡Comienza a explorar!</h3>
+            <p class="text-gray-500 dark:text-gray-400 text-center max-w-sm mb-6">Selecciona los filtros arriba y haz
+                clic en "Aplicar Filtros" para consultar el historial detallado de tus cotizaciones.</p>
         </div>
 
         <app-quotation-table [items]="quotations()" (edit)="onEdit($event)" (delete)="onDelete($event)">
@@ -38,6 +141,11 @@
 
     <!-- Upload Modal -->
     <app-quotation-upload *ngIf="showUploadModal()" (closed)="closeUploadModal($event)"></app-quotation-upload>
+
+    <!-- Create Modal -->
+    <app-quotation-create-modal *ngIf="showCreateModal()" [units]="units()" [suppliers]="suppliers()"
+        [products]="products()" (saved)="closeCreateModal(true)" (cancelled)="closeCreateModal(false)">
+    </app-quotation-create-modal>
 
     <!-- Edit Modal -->
     <app-quotation-edit-modal *ngIf="showEditModal() && editingQuotation()" [quotation]="editingQuotation()!"

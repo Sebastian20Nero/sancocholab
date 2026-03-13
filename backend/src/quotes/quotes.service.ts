@@ -59,6 +59,16 @@ export class QuotesService {
     const factor = normalized.cantidad.div(cantidadRaw);
     const precioCanon = factor.eq('1') ? precioRaw : precioRaw.div(factor);
 
+    let precioPresentacionRaw: Prisma.Decimal | null = null;
+    if (dto.precioPresentacion) {
+      try {
+        precioPresentacionRaw = new Prisma.Decimal(dto.precioPresentacion);
+        if (precioPresentacionRaw.lte('0')) throw new BadRequestException('precioPresentacion debe ser > 0');
+      } catch {
+        throw new BadRequestException('precioPresentacion inválido (decimal string).');
+      }
+    }
+
     const data: Prisma.CotizacionCreateInput = {
       proveedor: { connect: { idProveedor: proveedorId } },
       producto: { connect: { idProducto: productoId } },
@@ -67,6 +77,9 @@ export class QuotesService {
       cantidad: normalized.cantidad, // ✅ canónica
       fecha: new Date(dto.fecha),
       observacion: dto.observacion?.trim() || null,
+      presentacionCompra: dto.presentacionCompra?.trim() || null,
+      precioPresentacion: precioPresentacionRaw,
+      precioUnidad: precioCanon, // precio normalizado por unidad
       activo: true,
       createdBy: { connect: { idUsuario: createdById } },
     };
@@ -116,6 +129,8 @@ export class QuotesService {
       fecha: q.fecha,
       precioUnitario: q.precioUnitario?.toString?.() ?? String(q.precioUnitario),
       cantidad: q.cantidad?.toString?.() ?? String(q.cantidad),
+      presentacionCompra: q.presentacionCompra ?? null,
+      precioPresentacion: q.precioPresentacion?.toString?.() ?? null,
       activo: q.activo === true,
 
       proveedorId: q.proveedorId?.toString?.() ?? String(q.proveedorId),
@@ -244,6 +259,26 @@ export class QuotesService {
     // Actualizar observación si se proporciona
     if (dto.observacion !== undefined) {
       updateData.observacion = dto.observacion?.trim() || null;
+    }
+
+    // Actualizar presentación
+    if (dto.presentacionCompra !== undefined) {
+      updateData.presentacionCompra = dto.presentacionCompra?.trim() || null;
+    }
+
+    // Actualizar precio de presentación
+    if (dto.precioPresentacion !== undefined) {
+      if (dto.precioPresentacion === null || dto.precioPresentacion === '') {
+        updateData.precioPresentacion = null;
+      } else {
+        try {
+          const p = new Prisma.Decimal(dto.precioPresentacion);
+          if (p.lte('0')) throw new BadRequestException('precioPresentacion debe ser > 0');
+          updateData.precioPresentacion = p;
+        } catch {
+          throw new BadRequestException('precioPresentacion inválido (decimal string).');
+        }
+      }
     }
 
     return this.repo.update(idCotizacion, updateData);

@@ -12,235 +12,7 @@ type OllaItem = {
   error: string | null;
 };
 
-const TEMPLATE = /* html */`
-<div class="p-4 max-w-screen-xl mx-auto">
-  <!-- Header -->
-  <div class="flex items-center gap-3 mb-5">
-    <span class="text-3xl">🍲</span>
-    <div>
-      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">Ollas</h1>
-      <p class="text-sm text-gray-500">Planifica la producción del día y guarda el historial.</p>
-    </div>
-  </div>
-
-  <!-- Tabs -->
-  <div class="flex gap-1 mb-5 border-b">
-    <button
-      class="px-4 py-2 text-sm font-medium transition-colors"
-      [class.border-b-2]="activeTab() === 'calculadora'"
-      [class.border-blue-600]="activeTab() === 'calculadora'"
-      [class.text-blue-600]="activeTab() === 'calculadora'"
-      [class.text-gray-500]="activeTab() !== 'calculadora'"
-      (click)="activeTab.set('calculadora')"
-    >🧮 Calculadora</button>
-    <button
-      class="px-4 py-2 text-sm font-medium transition-colors"
-      [class.border-b-2]="activeTab() === 'historial'"
-      [class.border-blue-600]="activeTab() === 'historial'"
-      [class.text-blue-600]="activeTab() === 'historial'"
-      [class.text-gray-500]="activeTab() !== 'historial'"
-      (click)="activeTab.set('historial'); loadHistorial()"
-    >📋 Historial</button>
-  </div>
-
-  <!-- ══════════════════ TAB CALCULADORA ══════════════════ -->
-  <div *ngIf="activeTab() === 'calculadora'" class="grid gap-4 lg:grid-cols-2">
-
-    <!-- Buscador -->
-    <div class="border rounded-lg p-4 bg-white dark:bg-gray-800 shadow-sm">
-      <div class="font-semibold mb-3">Buscar receta</div>
-      <input
-        class="border p-2 w-full rounded mb-3"
-        placeholder="Nombre de la receta..."
-        [value]="searchQ()"
-        (input)="searchQ.set($any($event.target).value)"
-      />
-      <div class="text-xs text-gray-400 mb-2" *ngIf="searching()">Buscando...</div>
-      <div class="grid gap-2 max-h-72 overflow-y-auto">
-        <div
-          class="border rounded p-3 cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
-          *ngFor="let r of searchResults()"
-          (click)="prepareAdd(r)"
-        >
-          <div class="font-medium">{{ r.nombre }}</div>
-          <div class="text-xs text-gray-400 mt-0.5">Base: {{ r.porcionesBase ?? '—' }} porciones</div>
-        </div>
-      </div>
-      <!-- Sub-form porciones -->
-      <div class="border-t mt-4 pt-3" *ngIf="adding()">
-        <div class="font-medium mb-2">Agregar: <strong>{{ adding()!.nombre }}</strong></div>
-        <div class="flex gap-2 items-center flex-wrap">
-          <label class="text-sm">Porciones:</label>
-          <input class="border p-2 w-24 rounded" type="number" min="1"
-            [value]="addPorciones()" (input)="addPorciones.set(+($any($event.target).value))" />
-          <button class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" (click)="confirmAdd()">Agregar</button>
-          <button class="px-3 py-2 border rounded" (click)="adding.set(null)">Cancelar</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- La olla -->
-    <div class="border rounded-lg p-4 bg-white dark:bg-gray-800 shadow-sm">
-      <div class="flex items-center justify-between mb-3">
-        <div class="font-semibold">La olla del día</div>
-        <div class="flex gap-2 flex-wrap">
-          <button *ngIf="olla().length"
-            class="px-3 py-1.5 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700"
-            (click)="calcularTodo()" [disabled]="calculandoAlguno()">
-            {{ calculandoAlguno() ? 'Calculando...' : 'Calcular todo' }}
-          </button>
-          <button *ngIf="hayResultados()"
-            class="px-3 py-1.5 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-            (click)="abrirGuardar()" [disabled]="guardando()">
-            {{ guardando() ? 'Guardando...' : '💾 Guardar olla' }}
-          </button>
-          <button *ngIf="olla().length" class="px-3 py-1.5 border rounded text-sm" (click)="limpiarOlla()">Limpiar</button>
-        </div>
-      </div>
-
-      <div *ngIf="!olla().length" class="text-sm text-gray-400 py-8 text-center">
-        Agrega recetas desde el panel izquierdo
-      </div>
-
-      <div class="grid gap-3">
-        <div class="border rounded p-3" *ngFor="let item of olla(); let i = index">
-          <div class="flex justify-between items-start gap-2">
-            <div class="flex-1">
-              <div class="font-medium">{{ item.nombre }}</div>
-              <div class="text-sm text-gray-500">Porciones: <strong>{{ item.porciones }}</strong></div>
-              <div class="text-xs text-gray-400 animate-pulse" *ngIf="item.calculando">Calculando...</div>
-              <div class="text-xs text-red-500" *ngIf="item.error">{{ item.error }}</div>
-              <ng-container *ngIf="item.resultado as res">
-                <div class="text-sm mt-1">
-                  Total: <strong class="text-emerald-700">{{ formatPrecio(res.totalReceta) }}</strong>
-                  · Costo/porción: <strong>{{ formatPrecio(res.costoPorPorcion) }}</strong>
-                </div>
-              </ng-container>
-            </div>
-            <div class="flex flex-col gap-1 items-end shrink-0">
-              <input class="border p-1 w-20 rounded text-right text-sm" type="number" min="1"
-                [value]="item.porciones" (change)="updatePorciones(i, +($any($event.target).value))" />
-              <button class="text-xs text-red-500 hover:underline" (click)="removeFromOlla(i)">Quitar</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Totales -->
-      <div class="border-t mt-4 pt-3" *ngIf="hayResultados()">
-        <div class="font-semibold mb-1">Resumen de producción</div>
-        <div class="text-sm">Recetas: <strong>{{ olla().length }}</strong> · Porciones: <strong>{{ totalPorciones() }}</strong></div>
-        <div class="text-lg font-bold text-emerald-700 mt-1">Costo total: {{ formatPrecio(totalCosto()) }}</div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- Modal guardar -->
-  <div *ngIf="mostrarGuardar()" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md shadow-xl">
-      <h2 class="text-lg font-bold mb-4">Guardar olla</h2>
-      <div class="grid gap-3">
-        <div>
-          <label class="text-sm font-medium block mb-1">Nombre *</label>
-          <input class="border p-2 w-full rounded" [value]="guardarNombre()"
-            (input)="guardarNombre.set($any($event.target).value)"
-            placeholder="ej: Producción 21 Feb" />
-        </div>
-        <div>
-          <label class="text-sm font-medium block mb-1">Fecha *</label>
-          <input class="border p-2 w-full rounded" type="date" [value]="guardarFecha()"
-            (input)="guardarFecha.set($any($event.target).value)" />
-        </div>
-        <div>
-          <label class="text-sm font-medium block mb-1">Notas</label>
-          <textarea class="border p-2 w-full rounded" rows="2" [value]="guardarNotas()"
-            (input)="guardarNotas.set($any($event.target).value)"
-            placeholder="Observaciones opcionales..."></textarea>
-        </div>
-        <div *ngIf="errorGuardar()" class="text-sm text-red-500">{{ errorGuardar() }}</div>
-      </div>
-      <div class="flex gap-2 justify-end mt-4">
-        <button class="px-4 py-2 border rounded" (click)="mostrarGuardar.set(false)">Cancelar</button>
-        <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          (click)="confirmarGuardar()" [disabled]="guardando()">
-          {{ guardando() ? 'Guardando...' : 'Guardar' }}
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══════════════════ TAB HISTORIAL ══════════════════ -->
-  <div *ngIf="activeTab() === 'historial'">
-    <div class="flex gap-2 mb-4 flex-wrap">
-      <input class="border p-2 rounded text-sm" type="date" [value]="historialFrom()"
-        (input)="historialFrom.set($any($event.target).value)" placeholder="Desde" />
-      <input class="border p-2 rounded text-sm" type="date" [value]="historialTo()"
-        (input)="historialTo.set($any($event.target).value)" placeholder="Hasta" />
-      <button class="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700" (click)="loadHistorial()">Filtrar</button>
-    </div>
-
-    <div class="text-sm text-gray-400 py-6 text-center" *ngIf="historialLoading()">Cargando historial...</div>
-    <div class="text-sm text-gray-400 py-6 text-center" *ngIf="!historialLoading() && historial().length === 0">
-      No hay ollas guardadas
-    </div>
-
-    <div class="grid gap-3" *ngIf="!historialLoading()">
-      <div
-        class="border rounded-lg p-4 bg-white dark:bg-gray-800 shadow-sm cursor-pointer hover:border-blue-400 transition-colors"
-        *ngFor="let h of historial()"
-        (click)="toggleDetalle(h.idOllaPedido)"
-      >
-        <div class="flex justify-between items-start gap-3">
-          <div class="flex-1">
-            <div class="font-semibold">{{ h.nombre }}</div>
-            <div class="text-xs text-gray-400 mt-0.5">
-              {{ h.fecha | date:'dd/MM/yyyy' }} ·
-              {{ h.itemCount ?? 0 }} receta(s)
-            </div>
-          </div>
-          <div class="text-right shrink-0">
-            <div class="text-emerald-700 font-bold" *ngIf="h.totalCosto">{{ formatPrecio(h.totalCosto) }}</div>
-            <div class="text-gray-400 text-xs" *ngIf="!h.totalCosto">Sin costo</div>
-            <div class="text-xs mt-0.5 px-2 py-0.5 rounded-full inline-block"
-              [class.bg-blue-100]="h.status === 'GUARDADA'"
-              [class.text-blue-700]="h.status === 'GUARDADA'"
-            >{{ h.status }}</div>
-          </div>
-        </div>
-
-        <!-- Detalle expandible -->
-        <div *ngIf="detalleAbierto() === h.idOllaPedido" class="mt-3 border-t pt-3">
-          <div class="text-xs text-gray-400 animate-pulse" *ngIf="detalleLoading()">Cargando detalle...</div>
-          <div class="grid gap-2" *ngIf="detalleActual() as det">
-            <div *ngIf="det.notas" class="text-sm text-gray-500 italic">{{ det.notas }}</div>
-            <table class="w-full text-sm">
-              <thead class="text-xs text-gray-500">
-                <tr>
-                  <th class="text-left py-1">Receta</th>
-                  <th class="text-right py-1">Porciones</th>
-                  <th class="text-right py-1">Total</th>
-                  <th class="text-right py-1">$/porción</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let it of det.items" class="border-t">
-                  <td class="py-1">{{ it.recetaNombre }}</td>
-                  <td class="text-right py-1">{{ it.porciones }}</td>
-                  <td class="text-right py-1 text-emerald-700 font-medium">{{ it.totalReceta ? formatPrecio(it.totalReceta) : '—' }}</td>
-                  <td class="text-right py-1">{{ it.costoPorPorcion ? formatPrecio(it.costoPorPorcion) : '—' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-`;
-
-@Component({ standalone: true, imports: [CommonModule, DatePipe], template: TEMPLATE })
+@Component({ standalone: true, imports: [CommonModule, DatePipe], templateUrl: './ollas-page.html' })
 export class OllasPage {
   private recipesApi = inject(RecipesApi);
   private ollasApi = inject(OllasApi);
@@ -273,12 +45,25 @@ export class OllasPage {
 
   // ─── Historial ───
   historial = signal<OllaPedido[]>([]);
+  historialSearch = signal(''); // Nuevo filtro de busqueda por nombre
   historialLoading = signal(false);
-  historialFrom = signal('');
+  historialFrom = signal(new Date().toISOString().slice(0, 8) + '01'); // Por defecto desde el 1 del mes
   historialTo = signal('');
   detalleAbierto = signal<string | null>(null);
   detalleLoading = signal(false);
-  detalleActual = signal<OllaPedido | null>(null);
+  detalleActual = signal<any | null>(null);
+
+  // ─── Renombrar Olla ───
+  editandoNombreId = signal<string | null>(null);
+  editandoNombreValor = signal('');
+
+  // Computed filter
+  filteredHistorial = computed(() => {
+    const s = this.historialSearch().trim().toLowerCase();
+    const data = this.historial();
+    if (!s) return data;
+    return data.filter(h => h.nombre?.toLowerCase().includes(s));
+  });
 
   constructor() {
     this.doSearch('');
@@ -353,7 +138,9 @@ export class OllasPage {
       },
       error: (e) => {
         this.guardando.set(false);
-        this.errorGuardar.set(e?.error?.message ?? 'Error al guardar la olla.');
+        const m = e?.error?.message;
+        const msg = Array.isArray(m) ? m.join(', ') : (m ?? 'Error al guardar la olla.');
+        this.errorGuardar.set(msg);
       },
     });
   }
@@ -366,7 +153,7 @@ export class OllasPage {
     this.detalleActual.set(null);
     this.ollasApi.listPedidos({ from: this.historialFrom() || undefined, to: this.historialTo() || undefined }).subscribe({
       next: (res) => this.historial.set(res.items),
-      error: () => { },
+      error: () => this.historialLoading.set(false),
       complete: () => this.historialLoading.set(false),
     });
   }
@@ -379,6 +166,54 @@ export class OllasPage {
     this.ollasApi.getPedido(id).subscribe({
       next: (d) => { this.detalleActual.set(d); this.detalleLoading.set(false); },
       error: () => this.detalleLoading.set(false),
+    });
+  }
+
+  eliminarPedido(id: string, event: Event) {
+    event.stopPropagation();
+    if (!confirm('¿Estás seguro de que deseas eliminar esta olla del historial? (Sus datos de cotización permanecerán intactos).')) return;
+    
+    this.ollasApi.deletePedido(id).subscribe({
+      next: () => {
+        alert('🗑️ Olla inactivada del historial');
+        this.loadHistorial();
+      },
+      error: (e) => alert('Error: no se pudo eliminar la olla. ' + (e?.error?.message ?? '')),
+    });
+  }
+
+  // ─── Renombrar Olla ───
+  iniciarEdicionNombre(id: string, nombreActual: string, event: Event) {
+    event.stopPropagation();
+    this.editandoNombreId.set(id);
+    this.editandoNombreValor.set(nombreActual);
+  }
+
+  cancelarEdicionNombre(event: Event) {
+    event.stopPropagation();
+    this.editandoNombreId.set(null);
+    this.editandoNombreValor.set('');
+  }
+
+  guardarNuevoNombre(id: string, event: Event) {
+    event.stopPropagation();
+    const nuevoNombre = this.editandoNombreValor().trim();
+    if (!nuevoNombre) { alert('El nombre no puede estar vacío.'); return; }
+
+    this.ollasApi.updatePedidoNombre(id, nuevoNombre).subscribe({
+      next: () => {
+        // Actualizar directamente en la lista local sin recargar
+        this.historial.update(items =>
+          items.map(h => h.idOllaPedido === id ? { ...h, nombre: nuevoNombre } : h)
+        );
+        this.editandoNombreId.set(null);
+        this.editandoNombreValor.set('');
+      },
+      error: (e) => {
+        const m = e?.error?.message;
+        const msg = Array.isArray(m) ? m.join(', ') : (m ?? 'Error al renombrar la olla.');
+        alert(msg);
+      },
     });
   }
 

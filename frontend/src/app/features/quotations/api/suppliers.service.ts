@@ -24,4 +24,14 @@ export class SuppliersService {
             catchError(() => of([]))
         );
     }
+
+    create(data: { nit: string; nombre: string; }): Observable<Supplier> {
+        return this.http.post<any>(this.url, data).pipe(
+            map((s) => ({
+                id: s.id ?? s.idProveedor ?? s.uuid,
+                name: s.name ?? s.nombre ?? 'Sin nombre',
+                isActive: (s.isActive ?? s.activo ?? true) === true,
+            }))
+        );
+    }
 }

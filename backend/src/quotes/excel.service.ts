@@ -18,6 +18,8 @@ export class ExcelService {
             { header: 'Nombre Proveedor', key: 'nombreProveedor', width: 30 },
             { header: 'Nombre Producto', key: 'nombreProducto', width: 30 },
             { header: 'Categoría Producto', key: 'categoriaProducto', width: 25 },
+            { header: 'Presentación', key: 'presentacionCompra', width: 25 },
+            { header: 'Precio Presentación', key: 'precioPresentacion', width: 20 },
             { header: 'Precio Unitario', key: 'precioUnitario', width: 18 },
             { header: 'Cantidad', key: 'cantidad', width: 12 },
             { header: 'Unidad', key: 'unidad', width: 12 },
@@ -37,14 +39,15 @@ export class ExcelService {
         headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
         headerRow.height = 20;
 
-        // Add example row
         worksheet.addRow({
             nitProveedor: '900123456-1',
             nombreProveedor: 'Distribuidora Ejemplo',
             nombreProducto: 'Zanahoria',
             categoriaProducto: 'Verduras',
+            presentacionCompra: 'Bulto x 50 KG',
+            precioPresentacion: 125000,
             precioUnitario: 2500,
-            cantidad: 10,
+            cantidad: 50,
             unidad: 'KG',
             fecha: '15/01/2024',
             observacion: 'Producto fresco de alta calidad',
@@ -56,6 +59,8 @@ export class ExcelService {
             nombreProveedor: 'Carnes Premium',
             nombreProducto: 'Pechuga de Pollo',
             categoriaProducto: 'Carnes',
+            presentacionCompra: '',
+            precioPresentacion: null,
             precioUnitario: 12000,
             cantidad: 5,
             unidad: 'KG',
@@ -109,16 +114,28 @@ export class ExcelService {
                 example: 'Verduras',
             },
             {
+                field: 'Presentación',
+                description: 'Cómo se compra (Bulto, Caja, Cubeta, etc.)',
+                required: 'No',
+                example: 'Bulto x 50 KG',
+            },
+            {
+                field: 'Precio Presentación',
+                description: 'Precio total de esa presentación. Si lo pones junto con la cantidad total (ej=50kg), el sistema calcula el unitario.',
+                required: 'No',
+                example: '125000',
+            },
+            {
                 field: 'Precio Unitario',
-                description: 'Precio por unidad en pesos colombianos. Debe ser mayor a 0.',
-                required: 'Sí',
+                description: 'Precio por unidad en pesos colombianos. Obligatorio si NO usas Precio Presentación.',
+                required: 'Sí/No',
                 example: '2500',
             },
             {
                 field: 'Cantidad',
-                description: 'Cantidad cotizada. Debe ser mayor a 0.',
+                description: 'Cantidad total en la unidad seleccionada (kg, lb, etc.). Debe ser mayor a 0.',
                 required: 'Sí',
-                example: '10',
+                example: '50',
             },
             {
                 field: 'Unidad',
@@ -171,6 +188,8 @@ export class ExcelService {
             'Nombre Proveedor',
             'Nombre Producto',
             'Categoría Producto',
+            'Presentación',
+            'Precio Presentación',
             'Precio Unitario',
             'Cantidad',
             'Unidad',
@@ -204,11 +223,13 @@ export class ExcelService {
                 nombreProveedor: this.getCellValue(values[2]),
                 nombreProducto: this.getCellValue(values[3]),
                 categoriaProducto: this.getCellValue(values[4]),
-                precioUnitario: this.getCellValue(values[5]),
-                cantidad: this.getCellValue(values[6]),
-                unidad: this.getCellValue(values[7]),
-                fecha: this.getCellValue(values[8]),
-                observacion: this.getCellValue(values[9]),
+                presentacionOriginal: this.getCellValue(values[5]),
+                precioPresentacion: this.getCellValue(values[6]),
+                precioUnitario: this.getCellValue(values[7]),
+                cantidad: this.getCellValue(values[8]),
+                unidad: this.getCellValue(values[9]),
+                fecha: this.getCellValue(values[10]),
+                observacion: this.getCellValue(values[11]),
             });
         });
 
@@ -224,6 +245,14 @@ export class ExcelService {
      */
     private getCellValue(cell: any): string {
         if (cell === null || cell === undefined) return '';
+
+        if (cell instanceof Date) {
+            // Excel dates are parsed as UTC midnight
+            const day = String(cell.getUTCDate()).padStart(2, '0');
+            const month = String(cell.getUTCMonth() + 1).padStart(2, '0');
+            const year = cell.getUTCFullYear();
+            return `${day}/${month}/${year}`;
+        }
 
         // Handle different cell types
         if (typeof cell === 'object') {

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, PotStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RecipesService } from '../recipes/recipes.service';
@@ -190,28 +190,44 @@ export class PotsService {
     const createdById = BigInt(userId);
     const fecha = new Date(dto.fecha);
 
+    // 0. Validar que el nombre no exista entre ollas activas
+    const existente = await this.prisma.ollaPedido.findFirst({
+      where: {
+        nombre: { equals: dto.nombre, mode: 'insensitive' },
+        activo: true,
+      }
+    });
+    
+    if (existente) {
+      throw new ConflictException(`Ya existe una olla activa con el nombre "${dto.nombre}". Por favor, usa un nombre diferente.`);
+    }
+
     // 1. Calcular cada receta y capturar snapshot
     let totalCosto = new Prisma.Decimal('0');
-    const itemsCalc: any[] = [];
+    const itemsData: any[] = [];
 
     for (const it of dto.items) {
+      const recetaId = BigInt(it.recetaId);
+      const porciones = new Prisma.Decimal(it.porciones);
+      
       try {
         const calc = await this.recipesService.calculate(it.recetaId, { porciones: it.porciones });
         const totalReceta = new Prisma.Decimal(calc.totalReceta);
         const costoPorPorcion = calc.costoPorPorcion ? new Prisma.Decimal(calc.costoPorPorcion) : null;
         totalCosto = totalCosto.add(totalReceta);
-        itemsCalc.push({
-          recetaId: BigInt(it.recetaId),
-          porciones: new Prisma.Decimal(it.porciones),
+        
+        itemsData.push({
+          recetaId,
+          porciones,
           totalReceta,
           costoPorPorcion,
           snapshot: calc,
         });
       } catch {
         // Si no hay cotizaciones, guardar sin precios
-        itemsCalc.push({
-          recetaId: BigInt(it.recetaId),
-          porciones: new Prisma.Decimal(it.porciones),
+        itemsData.push({
+          recetaId,
+          porciones,
           totalReceta: null,
           costoPorPorcion: null,
           snapshot: null,
@@ -219,111 +235,90 @@ export class PotsService {
       }
     }
 
-    // 2. Insertar cabecera
-    const rows = await this.prisma.$queryRaw<{ idOllaPedido: bigint }[]>`
-      INSERT INTO "OllaPedido" ("nombre", "fecha", "notas", "totalCosto", "status", "createdById", "createdAt", "updatedAt")
-      VALUES (${dto.nombre}, ${fecha}, ${dto.notas ?? null}, ${totalCosto.toString()}::numeric, 'GUARDADA', ${createdById}, NOW(), NOW())
-      RETURNING "idOllaPedido"
-    `;
-    const idOllaPedido = rows[0].idOllaPedido;
+    // Insertar cabecera e items usando Prisma
+    const ollaPedido = await this.prisma.ollaPedido.create({
+      data: {
+        nombre: dto.nombre,
+        fecha,
+        notas: dto.notas?.trim() || null,
+        totalCosto,
+        status: 'GUARDADA',
+        createdById,
+        items: {
+          create: itemsData,
+        },
+      },
+      select: { idOllaPedido: true }
+    });
 
-    // 3. Insertar items
-    for (const it of itemsCalc) {
-      await this.prisma.$executeRaw`
-        INSERT INTO "OllaPedidoItem"
-          ("ollaPedidoId", "recetaId", "porciones", "totalReceta", "costoPorPorcion", "snapshot", "createdAt")
-        VALUES (
-          ${idOllaPedido},
-          ${it.recetaId},
-          ${it.porciones.toString()}::numeric,
-          ${it.totalReceta ? it.totalReceta.toString() : null}::numeric,
-          ${it.costoPorPorcion ? it.costoPorPorcion.toString() : null}::numeric,
-          ${it.snapshot ? JSON.stringify(it.snapshot) : null}::jsonb,
-          NOW()
-        )
-      `;
-    }
-
-    return this.findOnePedido(idOllaPedido.toString());
+    return this.findOnePedido(ollaPedido.idOllaPedido.toString());
   }
 
   async listPedidos(params?: { page?: number; limit?: number; from?: string; to?: string }) {
     const page = params?.page ?? 1;
     const limit = params?.limit ?? 20;
-    const offset = (page - 1) * limit;
-    const from = params?.from ? new Date(params.from) : null;
-    const to = params?.to ? new Date(params.to + 'T23:59:59') : null;
-
-    let rows: any[];
-    let countRows: any[];
-
-    if (from && to) {
-      rows = await this.prisma.$queryRaw`
-        SELECT op.*, COUNT(opi."idOllaPedidoItem")::int AS "itemCount"
-        FROM "OllaPedido" op
-        LEFT JOIN "OllaPedidoItem" opi ON opi."ollaPedidoId" = op."idOllaPedido"
-        WHERE op."fecha" >= ${from} AND op."fecha" <= ${to}
-        GROUP BY op."idOllaPedido"
-        ORDER BY op."fecha" DESC, op."createdAt" DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-      countRows = await this.prisma.$queryRaw`
-        SELECT COUNT(*)::int AS total FROM "OllaPedido" WHERE "fecha" >= ${from} AND "fecha" <= ${to}
-      `;
-    } else if (from) {
-      rows = await this.prisma.$queryRaw`
-        SELECT op.*, COUNT(opi."idOllaPedidoItem")::int AS "itemCount"
-        FROM "OllaPedido" op
-        LEFT JOIN "OllaPedidoItem" opi ON opi."ollaPedidoId" = op."idOllaPedido"
-        WHERE op."fecha" >= ${from}
-        GROUP BY op."idOllaPedido"
-        ORDER BY op."fecha" DESC, op."createdAt" DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-      countRows = await this.prisma.$queryRaw`
-        SELECT COUNT(*)::int AS total FROM "OllaPedido" WHERE "fecha" >= ${from}
-      `;
-    } else {
-      rows = await this.prisma.$queryRaw`
-        SELECT op.*, COUNT(opi."idOllaPedidoItem")::int AS "itemCount"
-        FROM "OllaPedido" op
-        LEFT JOIN "OllaPedidoItem" opi ON opi."ollaPedidoId" = op."idOllaPedido"
-        GROUP BY op."idOllaPedido"
-        ORDER BY op."fecha" DESC, op."createdAt" DESC
-        LIMIT ${limit} OFFSET ${offset}
-      `;
-      countRows = await this.prisma.$queryRaw`
-        SELECT COUNT(*)::int AS total FROM "OllaPedido"
-      `;
+    const skip = (page - 1) * limit;
+    
+    // Only fetch records that haven't been soft-deleted
+    const where: any = { activo: true };
+    if (params?.from || params?.to) {
+      where.fecha = {};
+      if (params.from) where.fecha.gte = new Date(params.from);
+      if (params.to) {
+        const d = new Date(params.to);
+        d.setDate(d.getDate() + 1);
+        where.fecha.lt = d;
+      }
     }
 
-    const total = Number(countRows[0]?.total ?? 0);
+    const [total, rows] = await this.prisma.$transaction([
+      this.prisma.ollaPedido.count({ where }),
+      this.prisma.ollaPedido.findMany({
+        where,
+        include: {
+          _count: {
+            select: { items: true }
+          }
+        },
+        orderBy: [
+          { fecha: 'desc' },
+          { createdAt: 'desc' }
+        ],
+        skip,
+        take: limit,
+      })
+    ]);
+
     const serialized = rows.map(r => ({
       ...r,
       idOllaPedido: r.idOllaPedido.toString(),
       createdById: r.createdById?.toString(),
       totalCosto: r.totalCosto ? r.totalCosto.toString() : null,
+      itemCount: r._count.items
     }));
 
     return { meta: { page, limit, total, pages: Math.ceil(total / limit) }, items: serialized };
   }
 
   async findOnePedido(id: string) {
-    const idBig = BigInt(id);
-    const rows = await this.prisma.$queryRaw<any[]>`
-      SELECT op.* FROM "OllaPedido" op WHERE op."idOllaPedido" = ${idBig}
-    `;
-    if (!rows.length) throw new NotFoundException('OllaPedido no encontrada.');
+    const idOllaPedido = BigInt(id);
+    
+    const olla = await this.prisma.ollaPedido.findUnique({
+      where: { idOllaPedido },
+      include: {
+        items: {
+          include: {
+            receta: true
+          },
+          orderBy: {
+            idOllaPedidoItem: 'asc'
+          }
+        }
+      }
+    });
 
-    const items = await this.prisma.$queryRaw<any[]>`
-      SELECT opi.*, r.nombre AS "recetaNombre", r."porcionesBase"
-      FROM "OllaPedidoItem" opi
-      JOIN "Receta" r ON r."idReceta" = opi."recetaId"
-      WHERE opi."ollaPedidoId" = ${idBig}
-      ORDER BY opi."idOllaPedidoItem"
-    `;
+    if (!olla) throw new NotFoundException('OllaPedido no encontrada.');
 
-    const olla = rows[0];
     return {
       idOllaPedido: olla.idOllaPedido.toString(),
       nombre: olla.nombre,
@@ -332,14 +327,68 @@ export class PotsService {
       totalCosto: olla.totalCosto?.toString() ?? null,
       status: olla.status,
       createdAt: olla.createdAt,
-      items: items.map(it => ({
+      items: olla.items.map(it => ({
         idOllaPedidoItem: it.idOllaPedidoItem.toString(),
         recetaId: it.recetaId.toString(),
-        recetaNombre: it.recetaNombre,
+        recetaNombre: it.receta.nombre,
         porciones: it.porciones?.toString() ?? null,
         totalReceta: it.totalReceta?.toString() ?? null,
         costoPorPorcion: it.costoPorPorcion?.toString() ?? null,
+        snapshot: it.snapshot
       })),
     };
+  }
+
+  async deletePedido(id: string) {
+    const idOllaPedido = BigInt(id);
+
+    const olla = await this.prisma.ollaPedido.findUnique({
+      where: { idOllaPedido }
+    });
+
+    if (!olla) throw new NotFoundException('La Olla que intentas eliminar no existe.');
+
+    // Soft delete: inactivar en lugar de borrar físicamente
+    await this.prisma.ollaPedido.update({
+      where: { idOllaPedido },
+      data: { activo: false },
+    });
+
+    return { message: 'Olla inactivada correctamente del historial.' };
+  }
+
+  async updatePedidoNombre(id: string, nombre: string) {
+    const idOllaPedido = BigInt(id);
+
+    const olla = await this.prisma.ollaPedido.findUnique({
+      where: { idOllaPedido }
+    });
+
+    if (!olla) throw new NotFoundException('La Olla que intentas actualizar no existe.');
+
+    // Validar que el nombre no esté vacío
+    if (!nombre || !nombre.trim()) {
+      throw new BadRequestException('El nombre de la olla no puede estar vacío.');
+    }
+
+    // Verificar que no exista otra olla con el mismo nombre (excluyendo la actual)
+    const duplicada = await this.prisma.ollaPedido.findFirst({
+      where: {
+        nombre: nombre.trim(),
+        activo: true,
+        idOllaPedido: { not: idOllaPedido },
+      },
+    });
+
+    if (duplicada) {
+      throw new ConflictException(`Ya existe una olla activa con el nombre "${nombre.trim()}".`);
+    }
+
+    await this.prisma.ollaPedido.update({
+      where: { idOllaPedido },
+      data: { nombre: nombre.trim() },
+    });
+
+    return { message: 'Nombre de la olla actualizado correctamente.' };
   }
 }

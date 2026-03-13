@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Delete, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/permissions/permissions.guard';
 import { RequirePerm } from '../auth/permissions/require-perm.decorator';
@@ -25,6 +25,51 @@ export class PotsController {
     return this.service.findAll(q);
   }
 
+  // ─── OllaPedido (multi-receta) ───
+
+  @RequirePerm('POT_CREATE')
+  @Post('pedidos')
+  createPedido(
+    @Body() dto: { nombre: string; fecha: string; notas?: string; items: { recetaId: string; porciones: string }[] },
+    @Req() req: any,
+  ) {
+    return this.service.createPedido(dto, req.user.userId);
+  }
+
+  // @RequirePerm('POT_READ')
+  @Get('pedidos')
+  listPedidos(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+  ) {
+    return this.service.listPedidos({
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      from,
+      to,
+    });
+  }
+
+  // @RequirePerm('POT_READ')
+  @Get('pedidos/:id')
+  getPedido(@Param('id') id: string) {
+    return this.service.findOnePedido(id);
+  }
+
+  @RequirePerm('POT_DELETE')
+  @Delete('pedidos/:id')
+  deletePedido(@Param('id') id: string) {
+    return this.service.deletePedido(id);
+  }
+
+  @RequirePerm('POT_UPDATE')
+  @Patch('pedidos/:id')
+  updatePedido(@Param('id') id: string, @Body() dto: { nombre: string }) {
+    return this.service.updatePedidoNombre(id, dto.nombre);
+  }
+
   @RequirePerm('POT_READ')
   @Get(':id')
   get(@Param('id') id: string) {
@@ -41,38 +86,5 @@ export class PotsController {
   @Post(':id/close')
   close(@Param('id') id: string, @Body() dto: ClosePotDto, @Req() req: any) {
     return this.service.close(id, req.user.userId, dto.motivo);
-  }
-
-  // ─── OllaPedido (multi-receta) ───
-
-  @RequirePerm('OLLA_CREATE')
-  @Post('pedidos')
-  createPedido(
-    @Body() dto: { nombre: string; fecha: string; notas?: string; items: { recetaId: string; porciones: string }[] },
-    @Req() req: any,
-  ) {
-    return this.service.createPedido(dto, req.user.userId);
-  }
-
-  @RequirePerm('OLLA_READ')
-  @Get('pedidos')
-  listPedidos(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-    @Query('from') from?: string,
-    @Query('to') to?: string,
-  ) {
-    return this.service.listPedidos({
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
-      from,
-      to,
-    });
-  }
-
-  @RequirePerm('OLLA_READ')
-  @Get('pedidos/:id')
-  getPedido(@Param('id') id: string) {
-    return this.service.findOnePedido(id);
   }
 }

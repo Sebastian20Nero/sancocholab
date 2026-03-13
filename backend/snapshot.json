@@ -1,0 +1,79 @@
+{
+  "items": [
+    {
+      "modo": "AUTO",
+      "total": "93750",
+      "itemId": "2",
+      "source": {
+        "type": "AUTO",
+        "fecha": "2024-01-24T00:00:00.000Z",
+        "paquete": null,
+        "quoteId": "17",
+        "proveedorId": "17",
+        "presentacion": null,
+        "precioNormalizado": "75"
+      },
+      "cantidad": "1250",
+      "producto": "Agua Natural",
+      "unidadId": "5",
+      "unidadKey": "UND",
+      "productoId": "17",
+      "proveedorId": null,
+      "precioUnitario": "75"
+    },
+    {
+      "modo": "AUTO",
+      "total": "312500",
+      "itemId": "3",
+      "source": {
+        "type": "AUTO",
+        "fecha": "2024-01-15T00:00:00.000Z",
+        "paquete": null,
+        "quoteId": "47",
+        "proveedorId": "27",
+        "presentacion": "Bulto x 50 KG",
+        "precioNormalizado": "50"
+      },
+      "cantidad": "6250",
+      "producto": "plasticos sas",
+      "unidadId": "1",
+      "unidadKey": "KG",
+      "productoId": "27",
+      "proveedorId": null,
+      "precioUnitario": "50"
+    },
+    {
+      "modo": "AUTO",
+      "total": "693750",
+      "itemId": "4",
+      "source": {
+        "type": "AUTO",
+        "fecha": "2026-03-04T12:00:00.000Z",
+        "paquete": null,
+        "quoteId": "35",
+        "proveedorId": "15",
+        "presentacion": "sss",
+        "precioNormalizado": "555"
+      },
+      "cantidad": "1250",
+      "producto": "Azúcar Blanca",
+      "unidadId": "1",
+      "unidadKey": "KG",
+      "productoId": "25",
+      "proveedorId": null,
+      "precioUnitario": "555"
+    }
+  ],
+  "receta": {
+    "id": "2",
+    "nombre": "limonada",
+    "categoria": "bebidas"
+  },
+  "filtros": {
+    "to": null,
+    "from": null
+  },
+  "porciones": "10000",
+  "totalReceta": "1100000",
+  "costoPorPorcion": "110"
+}

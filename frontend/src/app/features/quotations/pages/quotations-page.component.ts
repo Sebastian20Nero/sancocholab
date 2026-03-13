@@ -4,6 +4,7 @@ import { QuotationFiltersComponent } from '../components/quotation-filters.compo
 import { QuotationTableComponent } from '../components/quotation-table.component';
 import { QuotationUploadComponent } from '../components/quotation-upload.component';
 import { QuotationEditModalComponent } from '../components/quotation-edit-modal.component';
+import { QuotationCreateModalComponent } from '../components/quotation-create-modal.component';
 import { QuotationsService } from '../api/quotations.service';
 import { SuppliersService } from '../api/suppliers.service';
 import { ProductsService } from '../../products/api/products.service';
@@ -17,13 +18,14 @@ import { of } from 'rxjs';
 @Component({
     standalone: true,
     selector: 'app-quotations-page',
-    imports: [CommonModule, QuotationFiltersComponent, QuotationTableComponent, QuotationUploadComponent, QuotationEditModalComponent],
+    imports: [CommonModule, QuotationFiltersComponent, QuotationTableComponent, QuotationUploadComponent, QuotationEditModalComponent, QuotationCreateModalComponent],
     templateUrl: './quotations-page.component.html',
 })
 export class QuotationsPageComponent {
     loading = signal(false);
     error = signal<string | null>(null);
     showUploadModal = signal(false);
+    showCreateModal = signal(false);
     showEditModal = signal(false);
     editingQuotation = signal<Quotation | null>(null);
 
@@ -32,6 +34,11 @@ export class QuotationsPageComponent {
     products = signal<any[]>([]);
     categories = signal<any[]>([]);
     units = signal<any[]>([]);
+
+    // Summary metrics
+    totalInvestment = signal<number>(0);
+    uniqueSuppliersCount = signal<number>(0);
+    showMetrics = signal<boolean>(true);
 
     query = signal<QuotationQuery>({});
 
@@ -94,7 +101,9 @@ export class QuotationsPageComponent {
 
         this.quotationsApi.list(apiQuery).subscribe({
             next: (res) => {
-                this.quotations.set(res ?? []);
+                const results = res ?? [];
+                this.quotations.set(results);
+                this.calculateMetrics(results);
                 this.loading.set(false);
             },
             error: (e) => {
@@ -111,12 +120,36 @@ export class QuotationsPageComponent {
     closeUploadModal(uploaded: boolean) {
         this.showUploadModal.set(false);
         // Refresh data if upload was successful
-        if (uploaded && Object.keys(this.query()).length > 0) {
-            this.search();
+        if (uploaded) {
+            this.loadDropdownData();
+            if (Object.keys(this.query()).length > 0) {
+                this.search();
+            }
+        }
+    }
+
+    openCreateModal() {
+        this.loadDropdownData();
+        this.showCreateModal.set(true);
+    }
+
+    closeCreateModal(created: boolean) {
+        this.showCreateModal.set(false);
+        if (created) {
+            // Recargar proveedores por si se creó uno nuevo
+            this.loadDropdownData();
+            // Buscar si ya hay filtro, o buscar directo? Mejor buscar si ya hay filtro
+            if (Object.keys(this.query()).length > 0) {
+                this.search();
+            } else {
+                // O forzar búsqueda vacía para ver la nueva,
+                // pero como el filtro por defecto rige, mejor dejar que el usuario busque
+            }
         }
     }
 
     onEdit(quotation: Quotation) {
+        this.loadDropdownData();
         this.editingQuotation.set(quotation);
         this.showEditModal.set(true);
     }
@@ -128,6 +161,10 @@ export class QuotationsPageComponent {
         if (saved && Object.keys(this.query()).length > 0) {
             this.search();
         }
+    }
+
+    toggleMetrics() {
+        this.showMetrics.update(s => !s);
     }
 
     onDelete(quotation: Quotation) {
@@ -153,8 +190,27 @@ export class QuotationsPageComponent {
         });
     }
 
-    private formatCurrency(value: string): string {
-        const num = parseFloat(value);
+    private calculateMetrics(data: Quotation[]) {
+        let total = 0;
+        const uniqueSuppliers = new Set<string>();
+
+        for (const q of data) {
+            const precio = parseFloat(q.precioUnitario);
+            const cantidad = parseFloat(q.cantidad);
+            if (!isNaN(precio) && !isNaN(cantidad)) {
+                total += (precio * cantidad);
+            }
+            if (q.proveedorId) {
+                uniqueSuppliers.add(String(q.proveedorId));
+            }
+        }
+
+        this.totalInvestment.set(total);
+        this.uniqueSuppliersCount.set(uniqueSuppliers.size);
+    }
+
+    formatCurrency(value: string | number): string {
+        const num = typeof value === 'string' ? parseFloat(value) : value;
         if (isNaN(num)) return '$0.00';
         return new Intl.NumberFormat('es-CO', {
             style: 'currency',

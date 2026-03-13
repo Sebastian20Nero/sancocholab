@@ -83,7 +83,7 @@ export class BulkUploadService {
 
                 // STEP 2: Detect format (new vs legacy) and validate unit
                 const isNewFormat = !!(row.precioUnidad && row.unidadReceta);
-                const isLegacyFormat = !!(row.precioUnitario && row.cantidad && row.unidad);
+                const isLegacyFormat = !!((row.precioUnitario || row.precioPresentacion) && row.cantidad && row.unidad);
 
                 if (!isNewFormat && !isLegacyFormat) {
                     result.errors.push({
@@ -222,16 +222,19 @@ export class BulkUploadService {
                     }
                 } else {
                     // LEGACY FORMAT: calculate normalized price
-                    const precio = this.parseDecimal(row.precioUnitario);
-                    if (!precio || precio.lte('0')) {
-                        result.errors.push({
-                            row: rowNumber,
-                            field: 'precioUnitario',
-                            value: row.precioUnitario,
-                            message: 'Precio Unitario debe ser un número mayor a 0',
-                        });
-                        result.failed++;
-                        continue;
+                    if (row.precioPresentacion) {
+                        const precioPresent = this.parseDecimal(row.precioPresentacion);
+                        if (!precioPresent || precioPresent.lte('0')) {
+                            result.errors.push({
+                                row: rowNumber,
+                                field: 'precioPresentacion',
+                                value: row.precioPresentacion,
+                                message: 'precioPresentacion debe ser un número mayor a 0',
+                            });
+                            result.failed++;
+                            continue;
+                        }
+                        precioPresentacionValue = precioPresent;
                     }
 
                     const cantidad = this.parseDecimal(row.cantidad);
@@ -241,6 +244,24 @@ export class BulkUploadService {
                             field: 'cantidad',
                             value: row.cantidad,
                             message: 'Cantidad debe ser un número mayor a 0',
+                        });
+                        result.failed++;
+                        continue;
+                    }
+
+                    let precio: Prisma.Decimal | null = null;
+                    if (row.precioUnitario) {
+                        precio = this.parseDecimal(row.precioUnitario);
+                    } else if (precioPresentacionValue) {
+                        precio = precioPresentacionValue.div(cantidad);
+                    }
+
+                    if (!precio || precio.lte('0')) {
+                        result.errors.push({
+                            row: rowNumber,
+                            field: 'precioUnitario',
+                            value: row.precioUnitario || row.precioPresentacion,
+                            message: 'Debe proveer Precio Unitario o Precio Presentación (mayor a 0)',
                         });
                         result.failed++;
                         continue;
@@ -267,11 +288,23 @@ export class BulkUploadService {
 
                 // STEP 6: Find or create Provider
                 const nit = row.nitProveedor.trim();
-                let proveedorId = providersCache.get(nit);
+                // Usar nit y nombre para la clave de caché para cubrir ambos casos
+                const cacheKey = `${nit}_${row.nombreProveedor.trim().toLowerCase()}`;
+                let proveedorId = providersCache.get(cacheKey);
 
                 if (!proveedorId) {
-                    const existing = await this.prisma.proveedor.findUnique({
-                        where: { nit },
+                    const existing = await this.prisma.proveedor.findFirst({
+                        where: {
+                            OR: [
+                                { nit: nit },
+                                {
+                                    nombre: {
+                                        equals: row.nombreProveedor.trim(),
+                                        mode: 'insensitive'
+                                    }
+                                }
+                            ]
+                        },
                         select: { idProveedor: true },
                     });
 
@@ -279,9 +312,11 @@ export class BulkUploadService {
                         proveedorId = existing.idProveedor;
                     } else {
                         // Create new provider
+                        // Sugerencia: limpiar el NIT de espacios para un guardado más limpio
+                        const cleanNit = nit.replace(/\s+/g, '');
                         const newProvider = await this.prisma.proveedor.create({
                             data: {
-                                nit,
+                                nit: cleanNit,
                                 nombre: row.nombreProveedor.trim(),
                                 activo: true,
                                 createdById: userId,
@@ -292,7 +327,15 @@ export class BulkUploadService {
                         result.created.providers++;
                     }
 
-                    providersCache.set(nit, proveedorId);
+                    providersCache.set(cacheKey, proveedorId!);
+                    // Also cache by just NIT and just Name to catch subsequent variations in the same upload
+                    providersCache.set(`nit_${nit}`, proveedorId!);
+                    providersCache.set(`name_${row.nombreProveedor.trim().toLowerCase()}`, proveedorId!);
+                }
+
+                // Intenta recuperar del caché secundario si el principal falló
+                if (!proveedorId) {
+                    proveedorId = providersCache.get(`nit_${nit}`) || providersCache.get(`name_${row.nombreProveedor.trim().toLowerCase()}`);
                 }
 
                 // STEP 7: Find or create Category (if provided)
@@ -329,7 +372,7 @@ export class BulkUploadService {
                             result.created.categories++;
                         }
 
-                        categoriesCache.set(catKey, categoriaId);
+                        categoriesCache.set(catKey, categoriaId!);
                     }
                 }
 
@@ -374,15 +417,19 @@ export class BulkUploadService {
                         result.created.products++;
                     }
 
-                    productsCache.set(prodKey, productoId);
+                    productsCache.set(prodKey, productoId!);
+                }
+
+                if (!proveedorId || !productoId) {
+                    throw new Error("Missing required IDs for quotation creation");
                 }
 
                 // STEP 9: Create Quotation with new fields (vars are set in STEP 3 or we continued)
                 await this.prisma.cotizacion.create({
                     data: {
-                        proveedorId,
-                        productoId,
-                        unidadId,
+                        proveedorId: proveedorId!,
+                        productoId: productoId!,
+                        unidadId: unidadId!,
                         // NEW FIELDS
                         precioUnidad: precioUnidadNormalizado!,
                         presentacionCompra: row.presentacionOriginal?.trim() || null,
@@ -440,6 +487,16 @@ export class BulkUploadService {
         if (!value?.trim()) return null;
 
         const str = value.trim();
+
+        // Handle Excel serial date strings (e.g. "45324")
+        if (/^\d{5}$/.test(str)) {
+            const serial = parseInt(str, 10);
+            // Excel serial dates: days since Dec 30, 1899
+            const unix = (serial - 25569) * 86400 * 1000;
+            const utcDate = new Date(unix);
+            // Convert to local date object by using UTC values to ignore local timezone shift
+            return new Date(utcDate.getUTCFullYear(), utcDate.getUTCMonth(), utcDate.getUTCDate());
+        }
 
         // Try DD/MM/YYYY format
         const ddmmyyyyMatch = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);

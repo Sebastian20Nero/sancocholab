@@ -609,6 +609,7 @@ export class RecipesService {
               cantidad: true,               // LEGACY: package quantity
               presentacionCompra: true,     // NEW: presentation info
               proveedorId: true,
+              proveedor: { select: { nombre: true, nit: true } },
               fecha: true,
             },
           });
@@ -639,6 +640,8 @@ export class RecipesService {
             fecha: q.fecha,
             presentacion: q.presentacionCompra || null,  // NEW
             precioNormalizado: precioPorUnidad.toString(),
+            nombreProveedor: q.proveedor.nombre,
+            nitProveedor: q.proveedor.nit,
             paquete: q.precioUnidad ? null : {  // Only show for legacy
               cantidad: q.cantidad.toString(),
               precio: q.precioUnitario.toString(),
@@ -656,6 +659,7 @@ export class RecipesService {
               cantidad: true,               // LEGACY: package quantity
               presentacionCompra: true,     // NEW: presentation info
               proveedorId: true,
+              proveedor: { select: { nombre: true, nit: true } },
               fecha: true,
             },
           });
@@ -686,6 +690,8 @@ export class RecipesService {
             fecha: q.fecha,
             presentacion: q.presentacionCompra || null,  // NEW
             precioNormalizado: precioPorUnidad.toString(),
+            nombreProveedor: q.proveedor.nombre,
+            nitProveedor: q.proveedor.nit,
             paquete: q.precioUnidad ? null : {  // Only show for legacy
               cantidad: q.cantidad.toString(),
               precio: q.precioUnitario.toString(),
@@ -713,6 +719,8 @@ export class RecipesService {
         unidadKey: item.unidad.key,
         modo: item.modo,
         proveedorId: item.proveedorId ? item.proveedorId.toString() : null,
+        nombreProveedor: source?.nombreProveedor || null,
+        nitProveedor: source?.nitProveedor || null,
         cantidad: cantidadEscalada.toString(),
         precioUnitario: precioPorUnidad.toString(), // ✅ precio por 1 unidad canónica
         total: totalItem.toString(),

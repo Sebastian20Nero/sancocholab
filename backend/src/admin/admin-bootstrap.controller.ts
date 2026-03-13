@@ -30,12 +30,12 @@ export class AdminBootstrapController {
   async bootstrapAdmin(
     @Headers('x-bootstrap-secret') secret: string,
     @Body()
-    dto: {
-      nombres: string;
-      apellidos: string;
-      correo: string;
-      celular: string;
-      password: string;
+    dto?: {
+      nombres?: string;
+      apellidos?: string;
+      correo?: string;
+      celular?: string;
+      password?: string;
     },
   ) {
     // 1) Bloquear en producción
@@ -60,8 +60,13 @@ export class AdminBootstrapController {
     });
     if (existingAdmin) throw new ConflictException('Ya existe un ADMIN. Bootstrap bloqueado.');
 
-    // 5) Crear o promover usuario
-    const correo = dto.correo.trim().toLowerCase();
+    // 5) Crear o promover usuario (con valores por defecto)
+    const correo = (dto?.correo ?? 'admin@sancocholab.local').trim().toLowerCase();
+    const nombres = dto?.nombres ?? 'Admin';
+    const apellidos = dto?.apellidos ?? 'SancochoLab';
+    const celular = dto?.celular ?? '1234567890';
+    const password = dto?.password ?? 'AdminSancochoLab123!';
+
     const existingUser = await this.usersRepo.findUsuarioByCorreo(correo);
 
     let usuarioId: bigint;
@@ -71,11 +76,11 @@ export class AdminBootstrapController {
     } else {
       // reusa registro público
       await this.usersService.registerPublic({
-        nombres: dto.nombres,
-        apellidos: dto.apellidos,
+        nombres,
+        apellidos,
         correo,
-        celular: dto.celular,
-        password: dto.password,
+        celular,
+        password,
       });
 
       const created = await this.usersRepo.findUsuarioByCorreo(correo);

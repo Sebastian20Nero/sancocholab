@@ -18,4 +18,11 @@ export class UpdateQuoteDto {
 
     @IsString() @IsOptional()
     observacion?: string;
+
+    @IsString() @IsOptional()
+    presentacionCompra?: string;
+
+    @IsString() @IsOptional()
+    @Matches(/^\d+(\.\d{1,2})?$/, { message: 'precioPresentacion debe ser numérico (hasta 2 decimales)' })
+    precioPresentacion?: string;
 }

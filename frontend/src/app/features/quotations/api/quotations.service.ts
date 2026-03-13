@@ -24,6 +24,10 @@ export class QuotationsService {
         return this.http.get<Quotation[]>(this.url, { params });
     }
 
+    create(data: any): Observable<Quotation> {
+        return this.http.post<Quotation>(this.url, data);
+    }
+
     update(id: string, data: Partial<Quotation>): Observable<Quotation> {
         return this.http.put<Quotation>(`${this.url}/${id}`, data);
     }

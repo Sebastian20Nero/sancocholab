@@ -11,7 +11,7 @@ export class ProductsService {
   private readonly base = API_CONFIG.baseUrl;
   private readonly url = `${this.base}/products`;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   list(query: ProductQuery = {}): Observable<PagedResponse<Product>> {
     let params = new HttpParams();
@@ -21,8 +21,8 @@ export class ProductsService {
       params = params.set('activo', String(query.activo)); // ✅ true/false
 
     if (query.categoriaId !== undefined && query.categoriaId !== null && query.categoriaId !== '') {
-    params = params.set('categoriaId', String(query.categoriaId));
-  }
+      params = params.set('categoriaId', String(query.categoriaId));
+    }
 
     if (query.page) params = params.set('page', String(query.page));
     if (query.limit) params = params.set('limit', String(query.limit));
@@ -35,24 +35,30 @@ export class ProductsService {
     );
   }
 
+  create(data: { nombre: string }): Observable<Product> {
+    return this.http.post<any>(this.url, data).pipe(
+      map((p) => this.normalizeProducts([p])[0])
+    );
+  }
+
   private normalizeProducts(raw: any[]): Product[] {
     return (raw ?? []).map((p) => ({
-        id: p.id ?? p.idProducto ?? p.uuid,
+      id: p.id ?? p.idProducto ?? p.uuid,
 
-        nombre: p.nombre ?? p.name ?? 'Sin nombre',
-        descripcion: p.descripcion ?? p.description ?? null,
+      nombre: p.nombre ?? p.name ?? 'Sin nombre',
+      descripcion: p.descripcion ?? p.description ?? null,
 
-        categoriaId: p.categoriaId ?? p.categoryId ?? (p.categoria?.idCategoria ?? null),
-        categoriaNombre:
+      categoriaId: p.categoriaId ?? p.categoryId ?? (p.categoria?.idCategoria ?? null),
+      categoriaNombre:
         p.categoriaNombre ??
         p.categoryName ??
         p.categoria?.nombre ??   // ✅ ESTA ES LA CLAVE
         null,
 
-        activo: (p.activo ?? p.isActive ?? true) === true,
+      activo: (p.activo ?? p.isActive ?? true) === true,
 
-        createdAt: p.createdAt ?? p.created_at,
-        updatedAt: p.updatedAt ?? p.updated_at,
+      createdAt: p.createdAt ?? p.created_at,
+      updatedAt: p.updatedAt ?? p.updated_at,
     }));
-    }
+  }
 }

@@ -48,6 +48,7 @@ model Usuario {
   persona                  Persona                @relation(fields: [personaId], references: [idPersona])
   permisos                 UsuarioPermiso[]
   roles                    UsuarioRol[]
+  ollasPedidosCreadas      OllaPedido[]           @relation("OllaPedidoCreatedBy")
 }
 
 model Rol {
@@ -292,6 +293,7 @@ model Receta {
   createdBy     Usuario          @relation("RecetaCreatedBy", fields: [createdById], references: [idUsuario])
   updatedBy     Usuario?         @relation("RecetaUpdatedBy", fields: [updatedById], references: [idUsuario])
   items         RecetaItem[]
+  ollasPedidos  OllaPedidoItem[]
 
   @@index([activo])
   @@index([categoriaId])
@@ -440,6 +442,40 @@ model Olla {
   @@index([fecha])
   @@index([recetaId])
   @@index([status])
+}
+
+model OllaPedido {
+  idOllaPedido  BigInt           @id @default(autoincrement())
+  nombre        String
+  fecha         DateTime
+  notas         String?
+  totalCosto    Decimal?         @db.Decimal(14, 2)
+  status        String           @default("BORRADOR")
+  activo        Boolean          @default(true)
+  createdById   BigInt
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  createdBy     Usuario          @relation("OllaPedidoCreatedBy", fields: [createdById], references: [idUsuario])
+  items         OllaPedidoItem[]
+
+  @@index([fecha])
+  @@index([status])
+  @@index([activo])
+}
+
+model OllaPedidoItem {
+  idOllaPedidoItem BigInt     @id @default(autoincrement())
+  ollaPedidoId     BigInt
+  recetaId         BigInt
+  porciones        Decimal    @db.Decimal(14, 2)
+  totalReceta      Decimal?   @db.Decimal(14, 2)
+  costoPorPorcion  Decimal?   @db.Decimal(14, 6)
+  snapshot         Json?
+  createdAt        DateTime   @default(now())
+  ollaPedido       OllaPedido @relation(fields: [ollaPedidoId], references: [idOllaPedido], onDelete: Cascade)
+  receta           Receta     @relation(fields: [recetaId], references: [idReceta])
+
+  @@index([ollaPedidoId])
 }
 
 enum UserTokenType {

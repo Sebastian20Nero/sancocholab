@@ -62,15 +62,15 @@ import { Supplier } from '../models/supplier.model';
       </div>
 
       <div class="md:col-span-4 flex gap-2">
-        <button class="rounded-lg px-4 py-2 bg-brand-500 text-white hover:bg-brand-600"
+        <button class="rounded-lg px-4 py-2 bg-brand-500 text-white hover:bg-brand-600 flex items-center justify-center gap-2"
                 type="submit">
-          Aplicar Filtros
+          <span>🔍</span> Aplicar Filtros
         </button>
 
-        <button class="rounded-lg px-4 py-2 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800"
+        <button class="rounded-lg px-4 py-2 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-center gap-2"
                 type="button"
                 (click)="reset()">
-          Limpiar
+          <span>🧹</span> Limpiar
         </button>
       </div>
     </form>

@@ -13,4 +13,6 @@ export interface Quotation {
     unidadId: string;
     unidadKey: string | null;
     unidadNombre: string | null;
+    presentacionCompra?: string | null;
+    precioPresentacion?: string | null;
 }
