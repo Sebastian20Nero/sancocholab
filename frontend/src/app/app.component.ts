@@ -13,3 +13,4 @@ import { RouterModule } from '@angular/router';
 export class AppComponent {
   title = 'Ecommerce Dashboard | Calculadora SancochoLab';
 }
+// v2
