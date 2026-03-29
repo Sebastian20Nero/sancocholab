@@ -1,3 +1,420 @@
+# SancochoLab - Guia del equipo
+
+Este repositorio tiene:
+- `backend/`: API NestJS + Prisma
+- `frontend/`: app Angular
+- PostgreSQL en Docker
+
+## Objetivo de esta guia
+
+Dar un flujo simple para personas con poca experiencia en Docker/Node:
+1. Correr el proyecto.
+2. Actualizarlo sin romper entorno.
+3. Resolver fallas comunes.
+4. Desplegar en Ubuntu.
+
+## Arquitectura (resumen)
+
+- El archivo principal de orquestacion es `docker-compose.yml` (raiz).
+- Servicios base:
+  - `db`: PostgreSQL (`postgres:16-alpine`)
+  - `api`: backend NestJS
+- Servicio opcional:
+  - `pgadmin` (solo cuando se activa perfil `tools`)
+
+### Por que `localhost:5050` a veces no abre
+
+- `5050` corresponde a pgAdmin (interfaz web opcional).
+- PostgreSQL real escucha en `5432`.
+- Si no levantas pgAdmin, `5050` queda apagado y eso es normal.
+
+## Inicio rapido (3 comandos)
+
+1) Crear entorno:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+2) Levantar backend + db + frontend:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1
+```
+
+3) Verificar:
+- Frontend: `http://localhost:4200`
+- API: `http://localhost:3000`
+- Swagger: `http://localhost:3000/docs`
+
+Credenciales por defecto (si usas `.env.example` tal cual):
+- Correo: `johanstian20@hotmail.com`
+- Contrasena: `rmmr`
+
+## Scripts principales
+
+- `scripts/start-backend.ps1`  
+  Levanta `db + api` (y pgAdmin opcional).
+  - `-SeedOnce`: ejecuta seed en este arranque y luego deja `PRISMA_RUN_SEED=false`.
+
+- `scripts/start-all.ps1`  
+  Levanta `db + api` y abre frontend en otra terminal.
+  - `-SeedOnce`: igual comportamiento de seed solo por una ejecucion.
+
+- `scripts/reset-local.ps1`  
+  Reinicio de entorno local con opcion segura o hard reset.
+
+- `scripts/stop-all.ps1`  
+  Apaga stack Docker facilmente.
+
+- `scripts/backup-db.ps1`  
+  Genera un dump SQL para compartir datos con el equipo.
+
+- `scripts/restore-db.ps1`  
+  Restaura un dump SQL en la BD local (sobrescribe datos existentes).
+
+## Instructivos detallados
+
+- Correr local: `documentacion/01-correr-local.md`
+- Actualizacion: `documentacion/02-actualizacion.md`
+- Contingencias: `documentacion/03-contingencias.md`
+- Despliegue Ubuntu: `documentacion/04-despliegue-ubuntu.md`
+
+## Nota importante de datos
+
+Los datos de PostgreSQL se guardan en volumen Docker (`postgres_data`), no en la imagen.
+Por eso:
+- `docker compose down` NO borra datos.
+- `docker compose down -v` SI borra datos (solo usar en desarrollo cuando sea necesario).
+
+## Compartir datos con companeros
+
+Si cargas datos en tu equipo, los demas no los ven automaticamente porque cada PC usa su propio volumen local.
+Para compartir datos reales:
+
+1) Generar backup en tu equipo:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\backup-db.ps1
+```
+
+2) Enviar el `.sql` generado (carpeta `backups/`) al companero.
+
+3) Restaurar en el equipo del companero:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\restore-db.ps1 -InputFile .\backups\NOMBRE_BACKUP.sql
+```
+
+## Nota de seguridad
+
+Las credenciales por defecto son solo para entornos locales de desarrollo.
+En servidores reales deben cambiarse inmediatamente.
+# SancochoLab
+
+Monorepo con:
+- `backend/`: NestJS + Prisma + PostgreSQL
+- `frontend/`: Angular
+
+La orquestación Docker unificada vive en `docker-compose.yml` (raíz).
+
+## Inicio rápido (equipo)
+
+1) Crear `.env` desde plantilla:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+2) Levantar backend + base de datos (un comando):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-backend.ps1
+```
+
+2.1) Levantar backend + base de datos + frontend (un comando):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-all.ps1
+```
+
+Esto abre el frontend en una nueva terminal.
+
+3) Levantar frontend (local):
+
+```powershell
+cd frontend
+npm install
+npm run start
+```
+
+Accesos:
+- Frontend: `http://localhost:4200`
+- API: `http://localhost:3000`
+- Swagger: `http://localhost:3000/docs`
+
+Opcional (si necesitan UI de DB):
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\start-backend.ps1 -WithPgAdmin
+```
+
+pgAdmin: `http://localhost:5050`
+
+## ¿Por qué a veces falla localhost:5050?
+
+`5050` es **pgAdmin**, no PostgreSQL.
+- PostgreSQL corre en `localhost:5432`.
+- pgAdmin es opcional y solo levanta con perfil `tools` (`-WithPgAdmin`).
+
+Si solo levantas `db + api`, `5050` estará apagado (normal).
+
+## Instructivos para el equipo
+
+- Correr local: `documentacion/01-correr-local.md`
+- Actualizar proyecto: `documentacion/02-actualizacion.md`
+- Contingencias: `documentacion/03-contingencias.md`
+- Despliegue Ubuntu: `documentacion/04-despliegue-ubuntu.md`
+
+## Scripts operativos
+
+- Arranque backend + DB: `scripts/start-backend.ps1`
+- Arranque backend + DB + frontend: `scripts/start-all.ps1`
+  - `-WithPgAdmin`: incluye pgAdmin
+  - `-ReinstallFrontendDeps`: fuerza `npm install` en frontend
+  - `-NoFrontend`: solo backend + db (sin abrir Angular)
+- Reset de stack local: `scripts/reset-local.ps1`
+  - normal: reinicia contenedores sin borrar datos
+  - `-HardReset`: borra volúmenes (pierde datos locales de PostgreSQL)
+
+## Notas de arquitectura
+
+- Servicio `db` usa imagen oficial `postgres:16-alpine`.
+- Datos persistidos en volumen Docker `postgres_data`.
+- Servicio `api` ejecuta al arrancar:
+  - `prisma generate`
+  - `prisma migrate deploy`
+  - `prisma db seed` solo si `PRISMA_RUN_SEED=true`
+# SancochoLab - Guía de ejecución local y despliegue base
+
+Este repositorio usa:
+- `frontend/`: Angular
+- `backend/`: NestJS + Prisma
+- PostgreSQL como base de datos
+
+La arquitectura Docker unificada quedó en **un solo archivo**: `docker-compose.yml` en la raíz.
+
+## 1) Requisitos previos
+
+- Docker Desktop (o Docker Engine + Compose Plugin)
+- Node.js 20 LTS
+- npm 10+
+- Git
+
+Verifica rápido:
+
+```bash
+docker --version
+docker compose version
+node -v
+npm -v
+```
+
+## 2) Configuración inicial del proyecto
+
+1. Clona el repositorio:
+
+```bash
+git clone <URL_DEL_REPO>
+cd sancocholab
+```
+
+2. Crea el archivo de entorno global:
+
+```bash
+cp .env.example .env
+```
+
+En Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+3. Ajusta variables sensibles en `.env`:
+- `JWT_SECRET`
+- `BOOTSTRAP_SECRET`
+- (opcional) credenciales admin para seed inicial
+
+## 3) Levantar PostgreSQL + Backend con Docker
+
+Comando único:
+
+```bash
+docker compose up --build -d
+```
+
+Ver estado:
+
+```bash
+docker compose ps
+docker compose logs -f db
+docker compose logs -f api
+```
+
+Servicios esperados:
+- API NestJS: `http://localhost:3000`
+- Swagger: `http://localhost:3000/docs`
+- PostgreSQL: `localhost:5432`
+
+### ¿Qué hace el contenedor del backend al iniciar?
+
+El entrypoint ejecuta automáticamente:
+1. `npx prisma generate`
+2. `npx prisma migrate deploy`
+3. `npx prisma db seed` **solo si** `PRISMA_RUN_SEED=true`
+4. Inicia NestJS (`node dist/main.js`)
+
+## 4) Levantar Frontend Angular en local (desarrollo)
+
+El frontend se corre fuera de Docker para desarrollo:
+
+```bash
+cd frontend
+npm install
+npm run start
+```
+
+Frontend:
+- `http://localhost:4200`
+
+Si el backend está en Docker con puerto `3000`, el frontend puede consumir `http://localhost:3000`.
+
+## 5) Flujo recomendado para desarrolladores nuevos
+
+1. `cp .env.example .env`
+2. `docker compose up --build -d`
+3. `cd frontend && npm install && npm run start`
+4. Validar:
+   - Swagger en `http://localhost:3000/docs`
+   - Frontend en `http://localhost:4200`
+
+## 6) Problemas comunes y soluciones
+
+### 6.1 Puerto 5432 o 3000 ocupado
+
+Identifica proceso/contenedor en conflicto y libera puerto, o cambia en `.env`:
+- `DB_PORT=5433`
+- `API_PORT=3001`
+
+Luego:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+### 6.2 Quiero resetear base de datos (borrar todo)
+
+```bash
+docker compose down -v
+docker compose up --build -d
+```
+
+Esto elimina volúmenes de PostgreSQL y recrea todo.
+
+### 6.3 Migraciones Prisma fallan al iniciar API
+
+Revisa logs:
+
+```bash
+docker compose logs -f api
+```
+
+Causas comunes:
+- credenciales de DB incorrectas en `.env`
+- volumen antiguo incompatible
+- migraciones pendientes corruptas
+
+Acción rápida de recuperación en local:
+
+```bash
+docker compose down -v
+docker compose up --build -d
+```
+
+### 6.4 Frontend falla por dependencias faltantes
+
+Si Angular reporta paquetes faltantes (ej. `swiper`, `@amcharts/...`), instala lo que el proyecto requiera:
+
+```bash
+cd frontend
+npm install
+```
+
+Si persiste, revisar imports y `package.json`.
+
+## 7) Comandos útiles de operación
+
+Subir stack:
+
+```bash
+docker compose up --build -d
+```
+
+Detener stack:
+
+```bash
+docker compose down
+```
+
+Ver logs API:
+
+```bash
+docker compose logs -f api
+```
+
+Entrar al contenedor API:
+
+```bash
+docker compose exec api sh
+```
+
+Ejecutar comando Prisma manual:
+
+```bash
+docker compose exec api npx prisma migrate status
+```
+
+## 8) Despliegue base en Ubuntu (servidor)
+
+1. Instalar Docker + Compose plugin.
+2. Clonar repo en servidor.
+3. Crear `.env` desde `.env.example` y poner secretos reales.
+4. Ejecutar:
+
+```bash
+docker compose up --build -d
+```
+
+5. Abrir firewall para:
+- `API_PORT` (default 3000) solo si expondrás API pública
+- `DB_PORT` preferiblemente **no público** (ideal interno/VPN)
+
+Recomendaciones:
+- usar reverse proxy (Nginx/Traefik) para HTTPS
+- no exponer PostgreSQL públicamente
+- usar secretos fuertes y rotación de credenciales
+
+## 9) Archivos legacy que causaban confusión
+
+Para evitar configuraciones dispersas, esta guía asume como **fuente única**:
+- `docker-compose.yml` (raíz)
+- `backend/Dockerfile`
+- `.env` (raíz)
+
+Los archivos viejos de compose/dev en raíz o backend deben eliminarse o no usarse.
+
 # LEVANTAR DOCKER Y ACCESOS
 docker-compose -f docker-compose.dev.yml up
 

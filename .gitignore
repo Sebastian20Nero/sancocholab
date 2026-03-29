@@ -17,6 +17,7 @@ out/
 
 # ─── Prisma generados ────────────────────────────────────────────────────────
 /generated/prisma
+/backend/generated/prisma
 
 # ─── Angular cache ───────────────────────────────────────────────────────────
 .angular/
@@ -37,3 +38,6 @@ logs/
 # ─── Uploads temporales ──────────────────────────────────────────────────────
 uploads/
 tmp/
+
+# ─── Backups locales ─────────────────────────────────────────────────────────
+backups/

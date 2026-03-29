@@ -1,0 +1,11 @@
+Comando recomendado (desde raiz del proyecto):
+
+powershell -ExecutionPolicy Bypass -File .\scripts\reset-local.ps1
+
+Reset duro (borra volumenes de Postgres):
+
+powershell -ExecutionPolicy Bypass -File .\scripts\reset-local.ps1 -HardReset
+
+Con logs en vivo:
+
+powershell -ExecutionPolicy Bypass -File .\scripts\reset-local.ps1 -FollowLogs

@@ -1,16 +1,23 @@
+name: sancocholab
+
 services:
   db:
     image: postgres:16-alpine
     container_name: sancocholab_db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: sancocholab
-      POSTGRES_PASSWORD: sancocholab
-      POSTGRES_DB: sancocholab
+      POSTGRES_USER: ${POSTGRES_USER:-sancocholab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sancocholab}
+      POSTGRES_DB: ${POSTGRES_DB:-sancocholab}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sancocholab} -d ${POSTGRES_DB:-sancocholab}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   api:
     build:
@@ -20,23 +27,37 @@ services:
     container_name: sancocholab_api
     restart: unless-stopped
     depends_on:
-      - db
-    env_file:
-      - ./backend/.env.docker
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${API_PORT:-3000}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sancocholab}:${POSTGRES_PASSWORD:-sancocholab}@db:5432/${POSTGRES_DB:-sancocholab}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      BOOTSTRAP_SECRET: ${BOOTSTRAP_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NOMBRES: ${ADMIN_NOMBRES:-Admin}
+      ADMIN_APELLIDOS: ${ADMIN_APELLIDOS:-SancochoLab}
+      ADMIN_CELULAR: ${ADMIN_CELULAR:-0000000000}
+      PRISMA_RUN_SEED: ${PRISMA_RUN_SEED:-false}
     ports:
-      - "3000:3000"
-    command: sh -c "npx prisma migrate deploy && node dist/main.js"
+      - "${API_PORT:-3000}:3000"
 
-  web:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: sancocholab_web
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: sancocholab_pgadmin
     restart: unless-stopped
+    profiles: ["tools"]
     depends_on:
-      - api
+      db:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@sancocholab.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin123}
+      PGADMIN_DISABLE_POSTFIX: "1"
     ports:
-      - "8080:80"
+      - "${PGADMIN_PORT:-5050}:80"
 
 volumes:
-  db_data:
+  postgres_data:

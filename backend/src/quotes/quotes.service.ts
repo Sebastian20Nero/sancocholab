@@ -33,6 +33,9 @@ export class QuotesService {
 
     if (!prov || !prov.activo) throw new BadRequestException('Proveedor no existe o está inactivo');
     if (!prod || !prod.activo) throw new BadRequestException('Producto no existe o está inactivo');
+    if (!prod.categoriaId) {
+      throw new BadRequestException('El producto debe tener categoría para crear cotizaciones.');
+    }
     if (!uni || !uni.activo) throw new BadRequestException('Unidad no existe o está inactiva');
 
     // Decimals seguros

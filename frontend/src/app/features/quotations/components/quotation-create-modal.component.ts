@@ -83,6 +83,12 @@ interface UnitOption {
                                         {{ p.nombre }}
                                     </option>
                                 </select>
+                                <p class="mt-1 text-xs text-gray-500" *ngIf="selectedProductCategoryName()">
+                                    Categoría detectada: <span class="font-medium">{{ selectedProductCategoryName() }}</span>
+                                </p>
+                                <p class="mt-1 text-xs text-red-600 dark:text-red-400" *ngIf="formData.productoId && !selectedProductHasCategory()">
+                                    El producto seleccionado no tiene categoría. Edítalo o crea uno nuevo con categoría.
+                                </p>
                             </div>
 
                             <div *ngIf="creatingProduct()" class="animate-fade-in-up">
@@ -430,7 +436,7 @@ export class QuotationCreateModalComponent implements OnInit, OnDestroy {
             ? (this.creatingCategory()
                 ? this.newCategory.nombre.trim().length >= 2
                 : !!this.formData.categoriaId)
-            : true; // existing product already has its category
+            : this.selectedProductHasCategory(); // existing product must have category too
 
         const hasUnit = this.creatingUnit()
             ? (this.newUnit.key.trim().length >= 1 && this.newUnit.nombre.trim().length >= 2)
@@ -467,6 +473,19 @@ export class QuotationCreateModalComponent implements OnInit, OnDestroy {
             minimumFractionDigits: 0,
             maximumFractionDigits: 0,
         }).format(num);
+    }
+
+    selectedProductHasCategory(): boolean {
+        if (this.creatingProduct()) return true;
+        if (!this.formData.productoId) return false;
+        const selected = this.products.find((p: any) => String(p.id) === String(this.formData.productoId));
+        return !!selected?.categoriaId;
+    }
+
+    selectedProductCategoryName(): string | null {
+        if (this.creatingProduct() || !this.formData.productoId) return null;
+        const selected = this.products.find((p: any) => String(p.id) === String(this.formData.productoId));
+        return selected?.categoriaNombre ?? null;
     }
 
     async onSave() {
