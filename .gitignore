@@ -37,3 +37,12 @@ logs/
 # ─── Uploads temporales ──────────────────────────────────────────────────────
 uploads/
 tmp/
+
+# ─── Artefactos locales no versionables ──────────────────────────────────────
+backups/
+pgsql/
+.agents/
+backend/ghp_*
+admin
+admin.pub
+~$*.docx

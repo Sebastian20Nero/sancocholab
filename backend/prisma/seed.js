@@ -92,7 +92,18 @@ async function main() {
   }
 
   // 5) (Opcional) OPERADOR set mínimo (si quieres dejarlo vacío, comenta esta sección)
-  const operadorPermKeys = ['PROVIDER_READ', 'PRODUCT_READ', 'QUOTE_READ', 'RECIPE_READ', 'INVENTORY_READ', 'POT_READ'];
+  const operadorPermKeys = [
+    'PROVIDER_READ',
+    'PRODUCT_READ',
+    'QUOTE_READ',
+    'RECIPE_READ',
+    'INVENTORY_READ',
+    'POT_READ',
+    'POT_CREATE',
+    'POT_UPDATE',
+    'POT_DELETE',
+    'POT_CLOSE',
+  ];
   const operadorPerms = await prisma.permiso.findMany({
     where: { key: { in: operadorPermKeys }, activo: true },
   });

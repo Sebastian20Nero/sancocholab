@@ -1,6 +1,7 @@
 // src/app/features/ollas/ollas.api.ts
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { API_CONFIG } from '../../core/config/api.config';
 
 export type OllaPedido = {
     idOllaPedido: string;
@@ -26,7 +27,7 @@ export type OllaPedidoItem = {
 @Injectable({ providedIn: 'root' })
 export class OllasApi {
     private http = inject(HttpClient);
-    private base = 'http://localhost:3000';
+    private base = API_CONFIG.baseUrl;
 
     savePedido(body: { nombre: string; fecha: string; notas?: string; items: { recetaId: string; porciones: string }[] }) {
         return this.http.post<OllaPedido>(`${this.base}/pots/pedidos`, body);

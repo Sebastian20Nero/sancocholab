@@ -189,17 +189,26 @@ export class PotsService {
   ) {
     const createdById = BigInt(userId);
     const fecha = new Date(dto.fecha);
+    const nombre = dto.nombre?.trim();
+
+    if (!nombre) {
+      throw new BadRequestException('El nombre de la olla es obligatorio.');
+    }
+
+    if (!dto.items?.length) {
+      throw new BadRequestException('Debes agregar al menos una receta antes de guardar la olla.');
+    }
 
     // 0. Validar que el nombre no exista entre ollas activas
     const existente = await this.prisma.ollaPedido.findFirst({
       where: {
-        nombre: { equals: dto.nombre, mode: 'insensitive' },
+        nombre: { equals: nombre, mode: 'insensitive' },
         activo: true,
       }
     });
     
     if (existente) {
-      throw new ConflictException(`Ya existe una olla activa con el nombre "${dto.nombre}". Por favor, usa un nombre diferente.`);
+      throw new ConflictException(`Ya existe una olla activa con el nombre "${nombre}". Usa un nombre diferente o renombra la existente.`);
     }
 
     // 1. Calcular cada receta y capturar snapshot
@@ -238,7 +247,7 @@ export class PotsService {
     // Insertar cabecera e items usando Prisma
     const ollaPedido = await this.prisma.ollaPedido.create({
       data: {
-        nombre: dto.nombre,
+        nombre,
         fecha,
         notas: dto.notas?.trim() || null,
         totalCosto,

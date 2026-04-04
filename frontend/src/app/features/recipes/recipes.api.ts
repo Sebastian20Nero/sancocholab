@@ -2,11 +2,12 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Recipe, RecipeCategory, RecipeItem, Paginated } from './models';
+import { API_CONFIG } from '../../core/config/api.config';
 
 @Injectable({ providedIn: 'root' })
 export class RecipesApi {
   private http = inject(HttpClient);
-  private baseUrl = 'http://localhost:3000';
+  private baseUrl = API_CONFIG.baseUrl;
 
   getCategories(q?: string) {
     const params: any = { activo: 'true' };
