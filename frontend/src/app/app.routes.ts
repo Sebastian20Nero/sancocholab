@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { AppLayoutComponent } from './shared/layout/app-layout/app-layout.component';
 import { authGuard } from './core/guards/auth.guard';
+import { environment } from '../environments/environment';
 
 // demo components (los tuyos)
 import { EcommerceComponent } from './pages/dashboard/ecommerce/ecommerce.component';
@@ -22,6 +23,25 @@ import { SignInComponent } from './pages/auth-pages/sign-in/sign-in.component';
 import { SignUpComponent } from './pages/auth-pages/sign-up/sign-up.component';
 import { CalenderComponent } from './pages/calender/calender.component';
 
+const demoRoutes: Routes = environment.production
+  ? []
+  : [
+      { path: 'demo/calendar', component: CalenderComponent },
+      { path: 'demo/profile', component: ProfileComponent },
+      { path: 'demo/form-elements', component: FormElementsComponent },
+      { path: 'demo/basic-tables', component: BasicTablesComponent },
+      { path: 'demo/blank', component: BlankComponent },
+      { path: 'demo/invoice', component: InvoicesComponent },
+      { path: 'demo/line-chart', component: LineChartComponent },
+      { path: 'demo/bar-chart', component: BarChartComponent },
+      { path: 'demo/alerts', component: AlertsComponent },
+      { path: 'demo/avatars', component: AvatarElementComponent },
+      { path: 'demo/badge', component: BadgesComponent },
+      { path: 'demo/buttons', component: ButtonsComponent },
+      { path: 'demo/images', component: ImagesComponent },
+      { path: 'demo/videos', component: VideosComponent },
+    ];
+
 export const routes: Routes = [
   { path: '', redirectTo: 'app', pathMatch: 'full' },
 
@@ -42,6 +62,7 @@ export const routes: Routes = [
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       { path: 'dashboard', component: EcommerceComponent, title: 'Dashboard | SancochoLab' },
+      { path: 'profile', component: ProfileComponent, title: 'Perfil | SancochoLab' },
 
       {
         path: 'products',
@@ -66,21 +87,7 @@ export const routes: Routes = [
         loadChildren: () => import('./features/ollas/ollas.routes').then(m => m.OLLAS_ROUTES),
       },
 
-      // DEMO: los dejo en /app/demo/...
-      { path: 'demo/calendar', component: CalenderComponent },
-      { path: 'demo/profile', component: ProfileComponent },
-      { path: 'demo/form-elements', component: FormElementsComponent },
-      { path: 'demo/basic-tables', component: BasicTablesComponent },
-      { path: 'demo/blank', component: BlankComponent },
-      { path: 'demo/invoice', component: InvoicesComponent },
-      { path: 'demo/line-chart', component: LineChartComponent },
-      { path: 'demo/bar-chart', component: BarChartComponent },
-      { path: 'demo/alerts', component: AlertsComponent },
-      { path: 'demo/avatars', component: AvatarElementComponent },
-      { path: 'demo/badge', component: BadgesComponent },
-      { path: 'demo/buttons', component: ButtonsComponent },
-      { path: 'demo/images', component: ImagesComponent },
-      { path: 'demo/videos', component: VideosComponent },
+      ...demoRoutes,
     ],
   },
 

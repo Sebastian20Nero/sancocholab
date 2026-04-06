@@ -26,22 +26,20 @@ export class UserInfoCardComponent {
   closeModal() { this.isOpen = false; }
 
   user = {
-    firstName: 'Kelly Johana',
-    lastName: 'Bojaca Siatama',
+    firstName: 'Stoa Code',
+    lastName: 'Desarrollo',
     email: 'johanstian20@hotmail.com',
     phone: '+09 3022763928',
     bio: 'Team SancochoLab',
     social: {
-      facebook: 'https://www.facebook.com/PimjoHQ',
-      x: 'https://x.com/PimjoHQ',
-      linkedin: 'https://www.linkedin.com/company/pimjo',
-      instagram: 'https://instagram.com/PimjoHQ',
+      facebook: 'https://www.facebook.com/',
+      x: 'https://x.com/',
+      linkedin: 'https://www.linkedin.com/',
+      instagram: 'https://instagram.com/',
     },
   };
 
   handleSave() {
-    // Handle save logic here
-    console.log('Saving changes...');
     this.modal.closeModal();
   }
 }

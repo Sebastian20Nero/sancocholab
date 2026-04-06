@@ -23,8 +23,6 @@ export class ProvidersController {
 
   @Post()
     create(@Body() dto: CreateProviderDto, @Req() req: any) {
-    console.log('AUTH HEADER =>', req.headers?.authorization);
-    console.log('REQ.USER =>', req.user);
     return this.service.create(dto, this.getUserId(req));
  }
 

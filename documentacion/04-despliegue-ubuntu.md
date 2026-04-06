@@ -55,6 +55,15 @@ Ajusta como minimo:
 - `ADMIN_EMAIL`
 - `ADMIN_PASSWORD`
 - `WEB_PORT`
+- `CORS_ORIGINS`
+- `SWAGGER_ENABLED=false`
+
+Ejemplo recomendado:
+
+```bash
+CORS_ORIGINS=https://tu-dominio.com,http://IP_DEL_SERVIDOR
+SWAGGER_ENABLED=false
+```
 
 Si no quieres exponer la API publicamente, deja `API_PORT=3000`. El compose la publica solo en `127.0.0.1`.
 

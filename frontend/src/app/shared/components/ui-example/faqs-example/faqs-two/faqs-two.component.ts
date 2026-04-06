@@ -15,32 +15,32 @@ export class FaqsTwoComponent {
 
   accordionTwoData = [
     {
-      title: 'Do I get free updates?',
-      content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec quis magna ac nibh malesuada consectetur at vitae ipsum orem ipsum dolor sit amet, consectetur adipiscing elit nam fermentum, leo et lacinia accumsan.'
+      title: 'Como levanto el proyecto en local?',
+      content: 'Copia .env.example a .env, levanta backend y base de datos con los scripts operativos y luego corre el frontend con npm run start.'
     },
     {
-      title: 'Which license type is suitable for me?',
-      content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec quis magna ac nibh malesuada consectetur at vitae ipsum orem ipsum dolor sit amet, consectetur adipiscing elit nam fermentum, leo et lacinia accumsan.'
+      title: 'Como verifico que la API esta funcionando?',
+      content: 'Abre la ruta /docs en local o revisa los logs del contenedor api para confirmar que NestJS inicio correctamente.'
     },
     {
-      title: 'What are the Seats mentioned on pricing plans?',
-      content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec quis magna ac nibh malesuada consectetur at vitae ipsum orem ipsum dolor sit amet, consectetur adipiscing elit nam fermentum, leo et lacinia accumsan.'
+      title: 'Que hago si Docker falla?',
+      content: 'Usa los scripts de recuperacion del proyecto para reiniciar el stack y validar el estado de Docker Desktop.'
     },
     {
-      title: 'Can I Customize TailAdmin to suit my needs?',
-      content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec quis magna ac nibh malesuada consectetur at vitae ipsum orem ipsum dolor sit amet, consectetur adipiscing elit nam fermentum, leo et lacinia accumsan.'
+      title: 'Como configuro el servidor?',
+      content: 'En produccion define CORS_ORIGINS, desactiva Swagger si no lo necesitas y asegúrate de que el frontend consuma la API por /api o por tu dominio real.'
     },
     {
-      title: 'What does Unlimited Projects mean?',
-      content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec quis magna ac nibh malesuada consectetur at vitae ipsum orem ipsum dolor sit amet, consectetur adipiscing elit nam fermentum, leo et lacinia accumsan.'
+      title: 'Se pierde la base de datos al actualizar?',
+      content: 'No, mientras no elimines los volúmenes Docker. Las actualizaciones normales con git pull y docker compose up no deberían borrar datos.'
     },
     {
-      title: 'Can I upgrade to a higher plan?',
-      content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec quis magna ac nibh malesuada consectetur at vitae ipsum orem ipsum dolor sit amet, consectetur adipiscing elit nam fermentum, leo et lacinia accumsan.'
+      title: 'Como comparto el proyecto con mi equipo?',
+      content: 'Sube la rama al repositorio y comparte la guia rapida local junto con el nombre de la rama que deben descargar.'
     },
     {
-      title: 'Are there dark and light mode options?',
-      content: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec quis magna ac nibh malesuada consectetur at vitae ipsum orem ipsum dolor sit amet, consectetur adipiscing elit nam fermentum, leo et lacinia accumsan.'
+      title: 'Puedo personalizar esta interfaz?',
+      content: 'Si. Puedes ajustar textos, modales, branding y componentes visuales sin alterar la lógica principal del sistema.'
     }
   ];
 
@@ -56,7 +56,6 @@ export class FaqsTwoComponent {
   }
 
   toggleFirstGroup(index: number): void {
-    console.log(index,'index')
     this.openIndexFirstGroup = this.openIndexFirstGroup === index ? null : index;
   }
 

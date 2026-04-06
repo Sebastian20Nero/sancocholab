@@ -26,8 +26,6 @@ export class BillingInfoComponent {
   }
 
   handleSave ()  {
-    // Handle save logic here
-    console.log("Saving changes...");
     this.closeModal();
   };
 }

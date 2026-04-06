@@ -20,6 +20,10 @@ Si no eres tecnico, usa solo esta guia.
 Copy-Item .env.example .env
 ```
 
+Nota:
+- para uso local no necesitas cambiar `CORS_ORIGINS`
+- `SWAGGER_ENABLED=true` deja activa la ruta `http://127.0.0.1:3000/docs`
+
 ## 2) Levantar backend + base de datos + pgAdmin
 
 ```powershell

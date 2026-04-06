@@ -80,6 +80,11 @@ Se usa solo `docker-compose.yml` en la raiz:
 
 El frontend se ejecuta fuera de Docker en local para desarrollo mas simple.
 
+Variables relevantes para local:
+
+- `CORS_ORIGINS`: por defecto permite `localhost` y `127.0.0.1` para frontend, Swagger y pruebas locales.
+- `SWAGGER_ENABLED=true`: mantiene `http://127.0.0.1:3000/docs` activo en desarrollo.
+
 ### Servidor Ubuntu
 
 Se usa `deploy/docker-compose.server.yml`:
@@ -89,6 +94,11 @@ Se usa `deploy/docker-compose.server.yml`:
 - `web`: frontend Angular compilado y servido con Nginx.
 
 El frontend de produccion usa `environment.prod.ts` con `apiBaseUrl: '/api'`, y Nginx redirige `/api` al backend.
+
+Variables recomendadas para servidor:
+
+- `CORS_ORIGINS=https://tu-dominio.com,http://IP_DEL_SERVIDOR`
+- `SWAGGER_ENABLED=false`
 
 ## Despliegue en Ubuntu
 
